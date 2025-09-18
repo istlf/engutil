@@ -1,0 +1,10 @@
+name: '22051'
+channels:
+  - defaults
+dependencies:
+  - matplotlib
+  - numpy
+  - ipykernel
+  - sympy
+  - scipy
+prefix: /home/istlf/miniconda3/envs/22051
