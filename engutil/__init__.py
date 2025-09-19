@@ -10,7 +10,7 @@ from .signals import (
 )
 
 from .util import (
-    load_constants
+
 )
 
 from .plotting import (
@@ -43,6 +43,5 @@ __all__ = [
     "plot_ltspice"
     "make_spectrum",
     "reload_self",
-    "load_constants"
     
 ]
