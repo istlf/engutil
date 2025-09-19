@@ -42,6 +42,6 @@ __all__ = [
     "plot_bode",
     "plot_ltspice"
     "make_spectrum",
-    "reload_self",
+    "reload_self"
     
 ]
