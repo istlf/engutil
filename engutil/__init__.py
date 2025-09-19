@@ -9,9 +9,6 @@ from .signals import (
     make_spectrum
 )
 
-from .util import (
-
-)
 
 from .plotting import (
     init_latex,
