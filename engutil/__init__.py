@@ -9,6 +9,10 @@ from .signals import (
     make_spectrum
 )
 
+from .util import (
+    load_constants
+)
+
 from .plotting import (
     init_latex,
     plot_time_series,
@@ -38,5 +42,7 @@ __all__ = [
     "plot_bode",
     "plot_ltspice"
     "make_spectrum",
-    "reload_self"
+    "reload_self",
+    "load_constants"
+    
 ]

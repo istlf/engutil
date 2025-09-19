@@ -183,6 +183,7 @@ def plot_bode(freqs, Z_mag, Z_phase,
             ylabel_right="Phase [deg]",
             legend_left="Magnitude",
             legend_right="Phase",
+            xlim=None,
             save_loc=None):
     init_latex()
 
@@ -209,7 +210,8 @@ def plot_bode(freqs, Z_mag, Z_phase,
 
     plt.title(f"$\\textrm{{{title}}}$")
     plt.tight_layout()
-    
+    if xlim is not None:
+        plt.xlim(xlim)
     if save_loc:  # only save if save_loc is given
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
         plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
@@ -217,67 +219,119 @@ def plot_bode(freqs, Z_mag, Z_phase,
     else:
         plt.show()
 
-def plot_ltspice(files, title, save_loc=None):
-    """
-    Reads multiple LTSpice exported text files and plots the magnitude and phase response 
-    from all files on a single plot with dual y-axes.
+# def plot_ltspice(files, title, save_loc=None):
+#     """
+#     Reads multiple LTSpice exported text files and plots the magnitude and phase response 
+#     from all files on a single plot with dual y-axes.
     
-    Parameters:
-        files (list of tuples): [(file_path, legend), ...]
-        title (str): Plot title.
-        filename (str): Output filename for saving the plot.
-    Example: 
-        plot_ltspice(
-            [
-                ("export1.txt", "Circuit A"),
-                ("export2.txt", "Circuit B"),
-                ("export3.txt", "Circuit C"),
-            ],
-            title="Frequency Response",
-            filename="response.png"
-        )
+#     Parameters:
+#         files (list of tuples): [(file_path, legend), ...]
+#         title (str): Plot title.
+#         filename (str): Output filename for saving the plot.
+#     Example: 
+#         plot_ltspice(
+#             [
+#                 ("export1.txt", "Circuit A"),
+#                 ("export2.txt", "Circuit B"),
+#                 ("export3.txt", "Circuit C"),
+#             ],
+#             title="Frequency Response",
+#             filename="response.png"
+#         )
+#     """
+#     init_latex()
+#     def read_data(file_path):
+#         with open(file_path, 'r', encoding='ISO-8859-1') as file:
+#             lines = file.readlines()
+        
+#         freqs, mags, phases = [], [], []
+#         for line in lines[1:]:
+#             parts = line.strip().split('\t')
+#             freq = float(parts[0])
+#             complex_value = parts[1][1:-1]  
+#             magnitude, phase = complex_value.split(',')
+#             mags.append(float(magnitude[:-2]))
+#             phases.append(float(phase[:-1]))
+#             freqs.append(freq)
+        
+#         return (np.array(freqs)/1e3, 
+#                 np.array(mags), 
+#                 np.unwrap(np.deg2rad(phases))*180/np.pi)
+
+#     fig, ax1 = plt.subplots(figsize=(10, 6))
+#     ax1.set_prop_cycle(color=plt.cm.tab10.colors)
+
+#     for file_path, legend in files:
+#         freq, mag, phase = read_data(file_path)
+#         ax1.semilogx(freq, mag, label=f'{legend} magnitude')
+#         ax2 = ax1.twinx()
+#         ax2.semilogx(freq, phase, linestyle="--", label=f'{legend} phase')
+
+#     ax1.set_xlabel('Frequency (kHz)')
+#     ax1.set_ylabel('Magnitude (dB)')
+    
+#     ax1.grid(True, which='both', linestyle='-', linewidth=0.5)
+#     ax1.minorticks_on()
+#     ax1.legend(loc='lower left')
+
+#     ax2.set_ylabel('Phase (degrees)')
+#     ax2.legend(loc='upper left')
+
+#     plt.title(title)
+#     if save_loc is not None:
+#         # os.makedirs("figures", exist_ok=True)
+#         base = os.path.splitext(save_loc)[0]
+#         plt.savefig(f"{base}.eps")
+#         plt.savefig(f"{base}.png")
+#     plt.show()
+
+def read_ltspice_export(file_path):
+    """Read LTSpice exported AC analysis file."""
+    with open(file_path, 'r', encoding='ISO-8859-1') as file:
+        lines = file.readlines()
+    
+    freqs, mags, phases = [], [], []
+    for line in lines[1:]:
+        parts = line.strip().split('\t')
+        freq = float(parts[0])
+        val = parts[1][1:-1]  # "(mag dB, phase °)"
+        mag, phase = val.split(',')
+        mags.append(float(mag[:-2]))
+        phases.append(float(phase[:-1]))
+        freqs.append(freq)
+
+    return (np.array(freqs),
+            np.array(mags),
+            np.unwrap(np.deg2rad(phases))*180/np.pi)
+
+def plot_ltspice(
+        file_paths, 
+        legends=None, 
+        title="Bode Plot", 
+        save_loc=None,
+        xlabel="Frequency [Hz]",
+        ylabel_left="Magnitude [dB]",
+        ylabel_right="Phase [deg]",
+        xlim=None):
     """
-    init_latex()
-    def read_data(file_path):
-        with open(file_path, 'r', encoding='ISO-8859-1') as file:
-            lines = file.readlines()
-        
-        freqs, mags, phases = [], [], []
-        for line in lines[1:]:
-            parts = line.strip().split('\t')
-            freq = float(parts[0])
-            complex_value = parts[1][1:-1]  
-            magnitude, phase = complex_value.split(',')
-            mags.append(float(magnitude[:-2]))
-            phases.append(float(phase[:-1]))
-            freqs.append(freq)
-        
-        return (np.array(freqs)/1e3, 
-                np.array(mags), 
-                np.unwrap(np.deg2rad(phases))*180/np.pi)
+    Wrapper: reads one or more LTSpice exported text files
+    and forwards data into plot_bode().
+    """
+    if legends is None:
+        legends = [f"File {i+1}" for i in range(len(file_paths))]
 
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    ax1.set_prop_cycle(color=plt.cm.tab10.colors)
+    for i, file_path in enumerate(file_paths):
+        freqs, mags, phases = read_ltspice_export(file_path)
 
-    for file_path, legend in files:
-        freq, mag, phase = read_data(file_path)
-        ax1.semilogx(freq, mag, label=f'{legend} magnitude')
-        ax2 = ax1.twinx()
-        ax2.semilogx(freq, phase, linestyle="--", label=f'{legend} phase')
-
-    ax1.set_xlabel('Frequency (kHz)')
-    ax1.set_ylabel('Magnitude (dB)')
-    ax1.grid(True, which='both', linestyle='-', linewidth=0.5)
-    ax1.minorticks_on()
-    ax1.legend(loc='lower left')
-
-    ax2.set_ylabel('Phase (degrees)')
-    ax2.legend(loc='upper left')
-
-    plt.title(title)
-    if save_loc is not None:
-        # os.makedirs("figures", exist_ok=True)
-        base = os.path.splitext(save_loc)[0]
-        plt.savefig(f"{base}.eps")
-        plt.savefig(f"{base}.png")
-    plt.show()
+        # pass each dataset into your existing plot_bode
+        plot_bode(freqs,
+                  mags,
+                  phases,
+                  title=title,
+                  xlabel=xlabel,
+                  ylabel_left=ylabel_left,
+                  ylabel_right=ylabel_right,
+                  legend_left=f"{legends[i]} magnitude",
+                  legend_right=f"{legends[i]} phase",
+                  xlim=xlim,
+                  save_loc=(f"{save_loc}_{i}" if save_loc else None))
