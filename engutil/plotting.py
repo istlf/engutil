@@ -92,7 +92,7 @@ def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
     if save_loc is not None:
         # os.makedirs("figures", exist_ok=True)
         base = os.path.splitext(save_loc)[0]
-        plt.savefig(f"{base}.eps")
+        plt.savefig(f"{base}.svg")
         plt.savefig(f"{base}.png")
 
     plt.show()
@@ -108,8 +108,6 @@ def stem_time_series(data_list, legends=None, **kwargs):
     style_cycle = [(c, '-', None) for c in colors]
     _plot_core(data_list, legends=legends, plot_func=plt.stem,
                style_cycle=style_cycle, **kwargs)
-
-
 
 def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
                       plot_type='plot', save_loc=None, grid=True, deg=True):
@@ -170,120 +168,158 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
     if save_loc is not None:
         os.makedirs("figures", exist_ok=True)
         base = os.path.splitext(save_loc)[0]
-        plt.savefig(f"figures/{base}.eps")
+        plt.savefig(f"figures/{base}.svg")
         plt.savefig(f"figures/{base}.png")
 
     plt.show()
 
+import matplotlib.pyplot as plt
 
-def plot_bode(freqs, Z_mag, Z_phase,
+# def plot_bode(freqs, responses,
+#             title="Bode Plot",
+#             xlabel="Frequency [Hz]",
+#             ylabel_left="Magnitude [dB]",
+#             ylabel_right="Phase [deg]",
+#             legends=None,
+#             xlim=None,
+#             save_loc=None):
+#     """
+#     freqs: array of frequency points
+#     responses: list of (Z_mag, Z_phase) arrays
+#     legends: list of legend labels (optional)
+#     """
+#     init_latex()
+#     fig, ax1 = plt.subplots(figsize=(12,6))
+
+#     colors = plt.cm.tab10.colors  # cycling colors
+#     if legends is None:
+#         legends = [f"Response {i+1}" for i in range(len(responses))]
+
+#     # Left y-axis: magnitude
+#     for i, (Z_mag, _) in enumerate(responses):
+#         ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)], label=f"{legends[i]} (Mag)")
+#     ax1.set_xlabel(xlabel)
+#     ax1.set_ylabel(ylabel_left, color='tab:blue')
+#     ax1.tick_params(axis='y', labelcolor='tab:blue')
+#     ax1.grid(True, which="both", ls="--", lw=0.7)
+
+#     # Right y-axis: phase
+#     ax2 = ax1.twinx()
+#     for i, (_, Z_phase) in enumerate(responses):
+#         ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
+#     ax2.set_ylabel(ylabel_right, color='tab:red')
+#     ax2.tick_params(axis='y', labelcolor='tab:red')
+
+#     # Combined legend
+#     lines_1, labels_1 = ax1.get_legend_handles_labels()
+#     lines_2, labels_2 = ax2.get_legend_handles_labels()
+#     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
+
+#     plt.title(title)
+#     plt.tight_layout()
+#     if xlim is not None:
+#         plt.xlim(xlim)
+#     if save_loc:
+#         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
+#         plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
+#     plt.show()
+
+
+
+# def plot_bode(freqs, Z_mag, Z_phase,
+#             title="Bode Plot",
+#             xlabel="Frequency [Hz]",
+#             ylabel_left="Magnitude [dB]",
+#             ylabel_right="Phase [deg]",
+#             legend_left="Magnitude",
+#             legend_right="Phase",
+#             xlim=None,
+#             save_loc=None):
+#     init_latex()
+
+#     fig, ax1 = plt.subplots(figsize=(12,6))
+    
+
+#     # Left y-axis: magnitude
+#     ax1.semilogx(freqs, Z_mag, color='tab:blue', label=f"$\\textrm{{{legend_left}}}$")
+#     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
+#     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
+#     ax1.tick_params(axis='y', labelcolor='tab:blue')
+#     ax1.grid(True, which="both", ls="--", lw=0.7)
+
+#     # Right y-axis: phase
+#     ax2 = ax1.twinx()
+#     ax2.semilogx(freqs, Z_phase, color='tab:red', label=f"$\\textrm{{{legend_right}}}$")
+#     ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
+#     ax2.tick_params(axis='y', labelcolor='tab:red')
+
+#     # Combined legend
+#     lines_1, labels_1 = ax1.get_legend_handles_labels()
+#     lines_2, labels_2 = ax2.get_legend_handles_labels()
+#     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
+
+#     plt.title(f"$\\textrm{{{title}}}$")
+#     plt.tight_layout()
+#     if xlim is not None:
+#         plt.xlim(xlim)
+#     if save_loc:  # only save if save_loc is given
+#         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
+#         plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
+#         plt.show()
+#     else:
+#         plt.show()
+
+
+def plot_bode(freqs, responses,
             title="Bode Plot",
             xlabel="Frequency [Hz]",
             ylabel_left="Magnitude [dB]",
             ylabel_right="Phase [deg]",
-            legend_left="Magnitude",
-            legend_right="Phase",
+            legends=None,
             xlim=None,
             save_loc=None):
+    """
+    freqs: array of frequency points
+    responses: list of (Z_mag, Z_phase) arrays
+    legends: list of legend labels (optional)
+    """
     init_latex()
-
     fig, ax1 = plt.subplots(figsize=(12,6))
-    
+
+    colors = plt.cm.tab10.colors  # cycling colors
+    if legends is None:
+        legends = [f"Response {i+1}" for i in range(len(responses))]
 
     # Left y-axis: magnitude
-    ax1.semilogx(freqs, Z_mag, color='tab:blue', label=f"$\\textrm{{{legend_left}}}$")
-    ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
-    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
+    for i, (Z_mag, _) in enumerate(responses):
+        ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)], label=f"{legends[i]} (Mag)")
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel_left, color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
     ax1.grid(True, which="both", ls="--", lw=0.7)
 
     # Right y-axis: phase
     ax2 = ax1.twinx()
-    ax2.semilogx(freqs, Z_phase, color='tab:red', label=f"$\\textrm{{{legend_right}}}$")
-    ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
+    for i, (_, Z_phase) in enumerate(responses):
+        ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
+    ax2.set_ylabel(ylabel_right, color='tab:red')
     ax2.tick_params(axis='y', labelcolor='tab:red')
 
     # Combined legend
     lines_1, labels_1 = ax1.get_legend_handles_labels()
     lines_2, labels_2 = ax2.get_legend_handles_labels()
     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
-
+    #ax1.legend((f"$\\textrm{{{lines_1 + lines_2, labels_1 + labels_2}}}$"), loc='best')
+    # plt.title(title)
     plt.title(f"$\\textrm{{{title}}}$")
     plt.tight_layout()
     if xlim is not None:
         plt.xlim(xlim)
-    if save_loc:  # only save if save_loc is given
+    if save_loc:
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
-        plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
-        plt.show()
-    else:
-        plt.show()
+        plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
+    plt.show()
 
-# def plot_ltspice(files, title, save_loc=None):
-#     """
-#     Reads multiple LTSpice exported text files and plots the magnitude and phase response 
-#     from all files on a single plot with dual y-axes.
-    
-#     Parameters:
-#         files (list of tuples): [(file_path, legend), ...]
-#         title (str): Plot title.
-#         filename (str): Output filename for saving the plot.
-#     Example: 
-#         plot_ltspice(
-#             [
-#                 ("export1.txt", "Circuit A"),
-#                 ("export2.txt", "Circuit B"),
-#                 ("export3.txt", "Circuit C"),
-#             ],
-#             title="Frequency Response",
-#             filename="response.png"
-#         )
-#     """
-#     init_latex()
-#     def read_data(file_path):
-#         with open(file_path, 'r', encoding='ISO-8859-1') as file:
-#             lines = file.readlines()
-        
-#         freqs, mags, phases = [], [], []
-#         for line in lines[1:]:
-#             parts = line.strip().split('\t')
-#             freq = float(parts[0])
-#             complex_value = parts[1][1:-1]  
-#             magnitude, phase = complex_value.split(',')
-#             mags.append(float(magnitude[:-2]))
-#             phases.append(float(phase[:-1]))
-#             freqs.append(freq)
-        
-#         return (np.array(freqs)/1e3, 
-#                 np.array(mags), 
-#                 np.unwrap(np.deg2rad(phases))*180/np.pi)
-
-#     fig, ax1 = plt.subplots(figsize=(10, 6))
-#     ax1.set_prop_cycle(color=plt.cm.tab10.colors)
-
-#     for file_path, legend in files:
-#         freq, mag, phase = read_data(file_path)
-#         ax1.semilogx(freq, mag, label=f'{legend} magnitude')
-#         ax2 = ax1.twinx()
-#         ax2.semilogx(freq, phase, linestyle="--", label=f'{legend} phase')
-
-#     ax1.set_xlabel('Frequency (kHz)')
-#     ax1.set_ylabel('Magnitude (dB)')
-    
-#     ax1.grid(True, which='both', linestyle='-', linewidth=0.5)
-#     ax1.minorticks_on()
-#     ax1.legend(loc='lower left')
-
-#     ax2.set_ylabel('Phase (degrees)')
-#     ax2.legend(loc='upper left')
-
-#     plt.title(title)
-#     if save_loc is not None:
-#         # os.makedirs("figures", exist_ok=True)
-#         base = os.path.splitext(save_loc)[0]
-#         plt.savefig(f"{base}.eps")
-#         plt.savefig(f"{base}.png")
-#     plt.show()
 
 def read_ltspice_export(file_path):
     """Read LTSpice exported AC analysis file."""
@@ -309,7 +345,7 @@ def plot_ltspice(
         legends=None, 
         title="Bode Plot", 
         save_loc=None,
-        xlabel="Frequency [Hz]",
+        xlabel="Frequency $f$ / Hz",
         ylabel_left="Magnitude [dB]",
         ylabel_right="Phase [deg]",
         xlim=None):
@@ -317,21 +353,25 @@ def plot_ltspice(
     Wrapper: reads one or more LTSpice exported text files
     and forwards data into plot_bode().
     """
+    init_latex()
     if legends is None:
         legends = [f"File {i+1}" for i in range(len(file_paths))]
 
-    for i, file_path in enumerate(file_paths):
-        freqs, mags, phases = read_ltspice_export(file_path)
+    responses = []
+    freqs = None
 
-        # pass each dataset into your existing plot_bode
-        plot_bode(freqs,
-                  mags,
-                  phases,
-                  title=title,
-                  xlabel=xlabel,
-                  ylabel_left=ylabel_left,
-                  ylabel_right=ylabel_right,
-                  legend_left=f"{legends[i]} magnitude",
-                  legend_right=f"{legends[i]} phase",
-                  xlim=xlim,
-                  save_loc=(f"{save_loc}_{i}" if save_loc else None))
+    for file_path in file_paths:
+        f, mags, phases = read_ltspice_export(file_path)
+        if freqs is None:
+            freqs = f
+        responses.append((mags, phases))
+
+    plot_bode(freqs,
+              responses,
+              legends=legends,
+              title=title,
+              xlabel=xlabel,
+              ylabel_left=ylabel_left,
+              ylabel_right=ylabel_right,
+              xlim=xlim,
+              save_loc=save_loc)
