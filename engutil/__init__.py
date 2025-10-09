@@ -16,10 +16,16 @@ from .plotting import (
     stem_time_series,
     plot_real_phase,
     plot_bode,
-    plot_ltspice
+    plot_ltspice,
+    plot_zplane,
+    read_ltspice_export
 )
 
+from .electrical import (
+    acoustic_params
+)
 def reload_self():
+
     """Reload engutil and all its submodules (for Jupyter dev use)."""
     modules = [m for m in sys.modules if m.startswith("engutil")]
     for m in modules:
@@ -37,8 +43,11 @@ __all__ = [
     "stem_time_series",
     "plot_real_phase",
     "plot_bode",
+    "read_ltspice_export",
     "plot_ltspice"
     "make_spectrum",
-    "reload_self"
-    
+    "reload_self",
+    "plot_zplane",
+    "acoustic_params"
+
 ]

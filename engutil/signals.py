@@ -75,7 +75,6 @@ def make_spectrum(x, fs, scaling=False, oneside=False):
          
             Y = Y / N
             
-            
             Y[1:] *= 2
 
             if N % 2 == 0:

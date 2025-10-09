@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import cycle
-
+from matplotlib.patches import Circle
 def init_latex():
     plt.rcParams.update({
         "text.usetex": True,
@@ -28,8 +28,8 @@ def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
     init_latex()
     if legends is None:
         legends = [None] * len(data_list)
-
-    plt.figure()
+    
+    plt.figure() # 
     style_iter = cycle(style_cycle) if style_cycle else None
 
     for (x, y), label in zip(data_list, legends):
@@ -173,101 +173,6 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 
     plt.show()
 
-import matplotlib.pyplot as plt
-
-# def plot_bode(freqs, responses,
-#             title="Bode Plot",
-#             xlabel="Frequency [Hz]",
-#             ylabel_left="Magnitude [dB]",
-#             ylabel_right="Phase [deg]",
-#             legends=None,
-#             xlim=None,
-#             save_loc=None):
-#     """
-#     freqs: array of frequency points
-#     responses: list of (Z_mag, Z_phase) arrays
-#     legends: list of legend labels (optional)
-#     """
-#     init_latex()
-#     fig, ax1 = plt.subplots(figsize=(12,6))
-
-#     colors = plt.cm.tab10.colors  # cycling colors
-#     if legends is None:
-#         legends = [f"Response {i+1}" for i in range(len(responses))]
-
-#     # Left y-axis: magnitude
-#     for i, (Z_mag, _) in enumerate(responses):
-#         ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)], label=f"{legends[i]} (Mag)")
-#     ax1.set_xlabel(xlabel)
-#     ax1.set_ylabel(ylabel_left, color='tab:blue')
-#     ax1.tick_params(axis='y', labelcolor='tab:blue')
-#     ax1.grid(True, which="both", ls="--", lw=0.7)
-
-#     # Right y-axis: phase
-#     ax2 = ax1.twinx()
-#     for i, (_, Z_phase) in enumerate(responses):
-#         ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
-#     ax2.set_ylabel(ylabel_right, color='tab:red')
-#     ax2.tick_params(axis='y', labelcolor='tab:red')
-
-#     # Combined legend
-#     lines_1, labels_1 = ax1.get_legend_handles_labels()
-#     lines_2, labels_2 = ax2.get_legend_handles_labels()
-#     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
-
-#     plt.title(title)
-#     plt.tight_layout()
-#     if xlim is not None:
-#         plt.xlim(xlim)
-#     if save_loc:
-#         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
-#         plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
-#     plt.show()
-
-
-
-# def plot_bode(freqs, Z_mag, Z_phase,
-#             title="Bode Plot",
-#             xlabel="Frequency [Hz]",
-#             ylabel_left="Magnitude [dB]",
-#             ylabel_right="Phase [deg]",
-#             legend_left="Magnitude",
-#             legend_right="Phase",
-#             xlim=None,
-#             save_loc=None):
-#     init_latex()
-
-#     fig, ax1 = plt.subplots(figsize=(12,6))
-    
-
-#     # Left y-axis: magnitude
-#     ax1.semilogx(freqs, Z_mag, color='tab:blue', label=f"$\\textrm{{{legend_left}}}$")
-#     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
-#     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
-#     ax1.tick_params(axis='y', labelcolor='tab:blue')
-#     ax1.grid(True, which="both", ls="--", lw=0.7)
-
-#     # Right y-axis: phase
-#     ax2 = ax1.twinx()
-#     ax2.semilogx(freqs, Z_phase, color='tab:red', label=f"$\\textrm{{{legend_right}}}$")
-#     ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
-#     ax2.tick_params(axis='y', labelcolor='tab:red')
-
-#     # Combined legend
-#     lines_1, labels_1 = ax1.get_legend_handles_labels()
-#     lines_2, labels_2 = ax2.get_legend_handles_labels()
-#     ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
-
-#     plt.title(f"$\\textrm{{{title}}}$")
-#     plt.tight_layout()
-#     if xlim is not None:
-#         plt.xlim(xlim)
-#     if save_loc:  # only save if save_loc is given
-#         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
-#         plt.savefig(f"{save_loc}.eps", bbox_inches="tight")
-#         plt.show()
-#     else:
-#         plt.show()
 
 
 def plot_bode(freqs, responses,
@@ -375,3 +280,42 @@ def plot_ltspice(
               ylabel_right=ylabel_right,
               xlim=xlim,
               save_loc=save_loc)
+
+
+
+
+def plot_zplane(b, a, title="Pole-Zero plot", xlabel="Real Part", ylabel="Imaginary Part", save_loc=None):
+    
+    init_latex()
+    zeros = np.roots(b)
+    poles = np.roots(a)
+
+    fig, ax = plt.subplots()
+
+    unit_circle = Circle((0, 0), radius=1, fill=False, color='gray', ls='--', alpha=0.6)
+    ax.add_patch(unit_circle)
+
+    ax.plot(np.real(zeros), np.imag(zeros), 'o', markersize=8, label="$\\textrm{Zeros}$")
+    ax.plot(np.real(poles), np.imag(poles), 'x', markersize=8, label='Poles')
+
+    # ax.set_title('Pole-Zero Plot')
+    # ax.set_xlabel('Real Part')
+    # ax.set_ylabel("$")
+
+    ax.set_title(f"$\\textrm{{{title}}}$")
+    ax.set_xlabel(f"$\\textrm{{{xlabel}}}$")
+    ax.set_ylabel(f"$\\textrm{{{ylabel}}}$")
+
+    ax.axvline(0, color='gray', lw=0.5)
+    ax.axhline(0, color='gray', lw=0.5)
+    
+    ax.grid(True)
+    ax.set_aspect('equal')
+    ax.legend()
+
+
+    if save_loc:
+        plt.savefig(f"{save_loc}.png", bbox_inches="tight")
+        plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
+    plt.show()
+    plt.show()
