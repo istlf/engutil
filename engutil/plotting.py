@@ -177,9 +177,9 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 
 def plot_bode(freqs, responses,
             title="Bode Plot",
-            xlabel="Frequency [Hz]",
-            ylabel_left="Magnitude [dB]",
-            ylabel_right="Phase [deg]",
+            xlabel="Frequency $f$ / Hz",
+            ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
+            ylabel_right="Phase $\\angle$H / $^\\circ$",
             legends=None,
             xlim=None,
             save_loc=None):
@@ -187,6 +187,10 @@ def plot_bode(freqs, responses,
     freqs: array of frequency points
     responses: list of (Z_mag, Z_phase) arrays
     legends: list of legend labels (optional)
+
+    a_H_pv_0_mag, a_H_pv_0_phase = mag_phase_from_csv("LAB E/data/part1/a_H_pv_0.csv")
+    a_H_pv_30_mag, a_H_pv_30_phase = mag_phase_from_csv("LAB E/data/part1/a_H_pv_30.csv")
+    engutil.plot_bode(fn, [(a_H_pv_0_mag, a_H_pv_0_phase), (a_H_pv_30_mag, a_H_pv_30_phase)])
     """
     init_latex()
     fig, ax1 = plt.subplots(figsize=(12,6))
@@ -198,24 +202,39 @@ def plot_bode(freqs, responses,
     # Left y-axis: magnitude
     for i, (Z_mag, _) in enumerate(responses):
         ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)], label=f"{legends[i]} (Mag)")
-    ax1.set_xlabel(xlabel)
-    ax1.set_ylabel(ylabel_left, color='tab:blue')
+    ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
+    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
     ax1.grid(True, which="both", ls="--", lw=0.7)
 
     # Right y-axis: phase
     ax2 = ax1.twinx()
+    phase_plotted = False
     for i, (_, Z_phase) in enumerate(responses):
-        ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
-    ax2.set_ylabel(ylabel_right, color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
+        if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
+            ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)],
+                        linestyle="--", label=f"{legends[i]} (Phase)")
+            phase_plotted = True
+
+    if phase_plotted:
+        ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
+        ax2.tick_params(axis='y', labelcolor='tab:red')
+    else:
+        fig.delaxes(ax2)  # remove right axis if unused
+
+        
+    # ax2 = ax1.twinx()
+    # for i, (_, Z_phase) in enumerate(responses):
+    #     ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
+    # ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
+    # ax2.tick_params(axis='y', labelcolor='tab:red')
 
     # Combined legend
     lines_1, labels_1 = ax1.get_legend_handles_labels()
     lines_2, labels_2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='best')
-    #ax1.legend((f"$\\textrm{{{lines_1 + lines_2, labels_1 + labels_2}}}$"), loc='best')
-    # plt.title(title)
+    labels_all = [f"$\\textrm{{{lbl}}}$" for lbl in (labels_1 + labels_2)]
+    ax1.legend(lines_1 + lines_2, labels_all, loc='best')
+
     plt.title(f"$\\textrm{{{title}}}$")
     plt.tight_layout()
     if xlim is not None:

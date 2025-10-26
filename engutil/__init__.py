@@ -24,6 +24,10 @@ from .plotting import (
 from .electrical import (
     acoustic_params
 )
+
+from .util import (
+    load_complex_csv
+)
 def reload_self():
 
     """Reload engutil and all its submodules (for Jupyter dev use)."""
@@ -38,6 +42,7 @@ __all__ = [
     "generate_square",
     "generate_ramp",
     "generate_time",
+    
     "init_latex",
     "plot_time_series",
     "stem_time_series",
@@ -48,6 +53,9 @@ __all__ = [
     "make_spectrum",
     "reload_self",
     "plot_zplane",
-    "acoustic_params"
+
+    "acoustic_params",
+
+    "load_complex_csv"
 
 ]
