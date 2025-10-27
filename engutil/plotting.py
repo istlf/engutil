@@ -179,29 +179,35 @@ def plot_bode(freqs, responses,
             title="Bode Plot",
             xlabel="Frequency $f$ / Hz",
             ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
-            ylabel_right="Phase $\\angle$H / $^\\circ$",
+            ylabel_right="Phase $\\angle H$ / $^\\circ$",
             legends=None,
             xlim=None,
-            save_loc=None):
+            save_loc=None,
+            return_fig=False):
     """
-    freqs: array of frequency points
-    responses: list of (Z_mag, Z_phase) arrays
-    legends: list of legend labels (optional)
-
-    a_H_pv_0_mag, a_H_pv_0_phase = mag_phase_from_csv("LAB E/data/part1/a_H_pv_0.csv")
-    a_H_pv_30_mag, a_H_pv_30_phase = mag_phase_from_csv("LAB E/data/part1/a_H_pv_30.csv")
-    engutil.plot_bode(fn, [(a_H_pv_0_mag, a_H_pv_0_phase), (a_H_pv_30_mag, a_H_pv_30_phase)])
+    Colorblind-friendly Bode plot using the Okabe–Ito palette.
+    Use: 
+    fig, ax1, ax2 = engutil.plot_bode(f_tweeter, [(t_mag, t_phase)], title="Tweeter", return_fig=True)
+    ax1.scatter(f0, H_max, color='k', marker='o')
+    ax1.legend(["t_mag", "scatter"])
+    ax2.legend(["phase"])
     """
     init_latex()
     fig, ax1 = plt.subplots(figsize=(12,6))
 
-    colors = plt.cm.tab10.colors  # cycling colors
+    # Okabe–Ito colorblind-safe palette
+    colors = [
+        "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+        "#0072B2", "#D55E00", "#CC79A7", "#999999"
+    ]
+
     if legends is None:
         legends = [f"Response {i+1}" for i in range(len(responses))]
 
     # Left y-axis: magnitude
     for i, (Z_mag, _) in enumerate(responses):
-        ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)], label=f"{legends[i]} (Mag)")
+        ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)],
+                     label=f"{legends[i]} (Mag)")
     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
     ax1.tick_params(axis='y', labelcolor='tab:blue')
@@ -213,21 +219,14 @@ def plot_bode(freqs, responses,
     for i, (_, Z_phase) in enumerate(responses):
         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
             ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)],
-                        linestyle="--", label=f"{legends[i]} (Phase)")
+                         linestyle="--", label=f"{legends[i]} (Phase)")
             phase_plotted = True
 
     if phase_plotted:
         ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
         ax2.tick_params(axis='y', labelcolor='tab:red')
     else:
-        fig.delaxes(ax2)  # remove right axis if unused
-
-        
-    # ax2 = ax1.twinx()
-    # for i, (_, Z_phase) in enumerate(responses):
-    #     ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)], linestyle="--", label=f"{legends[i]} (Phase)")
-    # ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
-    # ax2.tick_params(axis='y', labelcolor='tab:red')
+        fig.delaxes(ax2)
 
     # Combined legend
     lines_1, labels_1 = ax1.get_legend_handles_labels()
@@ -236,12 +235,15 @@ def plot_bode(freqs, responses,
     ax1.legend(lines_1 + lines_2, labels_all, loc='best')
 
     plt.title(f"$\\textrm{{{title}}}$")
-    plt.tight_layout()
+    
     if xlim is not None:
         plt.xlim(xlim)
+    plt.tight_layout()
     if save_loc:
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
+    if return_fig:
+        return fig, ax1, ax2 if phase_plotted else None
     plt.show()
 
 

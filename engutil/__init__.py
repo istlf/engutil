@@ -26,7 +26,12 @@ from .electrical import (
 )
 
 from .util import (
-    load_complex_csv
+    load_complex_csv,
+    open_csv,
+    read_bode_csv,
+    tf_to_magphase,
+    find_max,
+    find_resonance_q
 )
 def reload_self():
 
@@ -56,6 +61,11 @@ __all__ = [
 
     "acoustic_params",
 
-    "load_complex_csv"
+    "load_complex_csv",
+    "open_csv",
+    "read_bode_csv",
+    "tf_to_magphase",
+    "find_max",
+    "find_resonance_q"
 
 ]
