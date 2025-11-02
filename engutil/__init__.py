@@ -31,7 +31,9 @@ from .util import (
     read_bode_csv,
     tf_to_magphase,
     find_max,
-    find_resonance_q
+    find_f1_f2,
+    round_to_E,
+    pprint
 )
 def reload_self():
 
@@ -66,6 +68,8 @@ __all__ = [
     "read_bode_csv",
     "tf_to_magphase",
     "find_max",
-    "find_resonance_q"
+    "find_f1_f2",
+    "round_to_E",
+    "pprint"
 
 ]

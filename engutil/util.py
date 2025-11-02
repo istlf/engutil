@@ -1,4 +1,7 @@
 import numpy as np 
+import math 
+import inspect
+import sympy as sp 
 
 
 def load_complex_csv(path, single_line=False):
@@ -52,107 +55,55 @@ def read_bode_csv(file_name):
     return mag, phase
 
 def tf_to_magphase(H):
-    mag = 20*np.log10(np.abs(H))
+    mag_db = 20*np.log10(np.abs(H))
+    mag_lin = np.abs(H)
     phase = np.unwrap(np.angle(H)*180/np.pi)
 
-    return mag, phase
+    return mag_db, phase, mag_lin
 
-# def find_max(f, H):
-#     max_idx = np.argmax(H)
-#     f0 = f[max_idx]
-#     H_max = np.abs(H[max_idx])
-#     return f0, H_max, max_idx
-
-def _interp_cross(f_arr, Z_arr, Zr, peak_idx, side):
-    """Robustly find interpolated crossing frequency on one side of peak."""
-    if side == "left":
-        idxs = np.arange(0, peak_idx)
-    else:
-        idxs = np.arange(peak_idx, len(Z_arr))
-
-    if len(idxs) < 2:
-        return np.nan
-
-    # Try to find a sign-change bracket
-    sign_changes = np.where(np.diff(np.sign(Z_arr[idxs] - Zr)) != 0)[0]
-    if len(sign_changes) > 0:
-        # For left take last, for right take first
-        sc = sign_changes[-1] if side == "left" else sign_changes[0]
-        i = idxs[sc]
-        j = i + 1
-        return np.interp(Zr, [Z_arr[i], Z_arr[j]], [f_arr[i], f_arr[j]])
-
-    # If no sign change, find nearest index and pick neighbour towards peak to form a bracket
-    nearest = idxs[np.argmin(np.abs(Z_arr[idxs] - Zr))]
-    # choose neighbour towards peak
-    if side == "left":
-        if nearest == peak_idx - 1:
-            i, j = nearest - 1, nearest
-        else:
-            i, j = nearest, nearest + 1
-    else:  # right
-        if nearest == peak_idx:
-            i, j = nearest, nearest + 1 if nearest + 1 < len(Z_arr) else (nearest - 1, nearest)
-        else:
-            i, j = nearest - 1, nearest
-
-    # validate indices
-    if i < 0 or j >= len(Z_arr):
-        return np.nan
-    return np.interp(Zr, [Z_arr[i], Z_arr[j]], [f_arr[i], f_arr[j]])
-
-
-def find_resonance_q(f, ZL, Re=None, f_range=None):
+def find_f1_f2(f, ZL, R_E, f_range=None):
     """
-    Returns: f1, f2, f0, Zr, Zmax, QM, QE, QT
-    ZL may be complex or already magnitudes.
+    Find f1 and f2 where |ZL| crosses sqrt(Re * Zmax),
+    optionally within a frequency range.
     """
-    f = np.asarray(f)
-    ZL = np.asarray(ZL)
-
-    # apply frequency range mask
+    # Apply optional range
     if f_range is not None:
         mask = (f >= f_range[0]) & (f <= f_range[1])
-        if not np.any(mask):
-            raise ValueError("f_range excludes all frequencies")
         f = f[mask]
         ZL = ZL[mask]
 
-    # magnitude
-    Zmag = np.abs(ZL)
-
-    # find peak
-    peak_idx = int(np.argmax(Zmag))
-    f0 = float(f[peak_idx])
-    Zmax = float(Zmag[peak_idx])
+    # Find resonance peak
+    f0, Zmax, Zmax_idx = find_max(f, ZL, f_range=f_range)
 
     # DC resistance
-    if Re is None:
-        # try to estimate from lowest-frequency values (first few points)
-        n_est = min(5, len(Zmag))
-        Re_est = np.min(Zmag[:n_est])
+    # Re_1 = np.abs(ZL[0]) if Re is None else Re
+    # Zr = np.sqrt(np.abs(Re_1) * Zmax)
+    Zr = np.sqrt(R_E*Zmax)
+
+    # Split data
+    left_f = f[:Zmax_idx]
+    left_Z = np.abs(ZL[:Zmax_idx])
+    right_f = f[Zmax_idx:]
+    right_Z = np.abs(ZL[Zmax_idx:])
+
+    # Left crossing
+    cross_left = np.where(np.diff(np.sign(left_Z - Zr)))[0]
+    if len(cross_left) > 0:
+        i = cross_left[-1]
+        f1 = np.interp(Zr, [left_Z[i], left_Z[i+1]], [left_f[i], left_f[i+1]])
     else:
-        Re_est = float(Re)
-    if Re_est <= 0:
-        raise ValueError("Re must be positive")
+        f1 = np.nan
 
-    Zr = np.sqrt(Re_est * Zmax)
-
-    # find f1 (left) and f2 (right) robustly
-    f1 = _interp_cross(f, Zmag, Zr, peak_idx, side="left")
-    f2 = _interp_cross(f, Zmag, Zr, peak_idx, side="right")
-
-    # compute rc and Q factors if f1,f2 valid and distinct
-    if not np.isnan(f1) and not np.isnan(f2) and (f2 > f1):
-        rc = Zmax / Re_est
-        QM = f0 * np.sqrt(rc) / (f2 - f1)
-        QE = QM / (rc - 1) if (rc - 1) != 0 else np.nan
-        QT = QM / rc if rc != 0 else np.nan
+    # Right crossing
+    cross_right = np.where(np.diff(np.sign(right_Z - Zr)))[0]
+    if len(cross_right) > 0:
+        i = cross_right[0]
+        f2 = np.interp(Zr, [right_Z[i], right_Z[i+1]], [right_f[i], right_f[i+1]])
     else:
-        QM = QE = QT = np.nan
+        f2 = np.nan
 
-    return f0, f1, f2, Zr, Zmax, QM, QE, QT
-
+    return f1, f2, Zr
+    
 def find_max(f, H, f_range=None):
     """
     Find the maximum magnitude in H, optionally within a frequency range.
@@ -186,3 +137,30 @@ def find_max(f, H, f_range=None):
     f0 = f[max_idx]
     H_max = np.abs(H[max_idx])
     return f0, H_max, max_idx
+
+
+# def pprint(*args):
+#     frame = inspect.currentframe().f_back
+#     for var in args:
+#         for name, val in frame.f_locals.items():
+#             if var is val:
+#                 print(f"{name:<15}: {val:.5e}")
+#                 break
+
+def pprint(*args, eng=True):
+    frame = inspect.currentframe().f_back
+    for var in args:
+        for name, val in frame.f_locals.items():
+            if var is val:
+                # Convert sympy numbers to float if possible
+                if isinstance(val, (sp.Float, sp.Integer, sp.Rational)):
+                    val = float(val)
+
+                if isinstance(val, (int, float)) and val != 0 and eng:
+                    exp = int(math.floor(math.log10(abs(val)) / 3) * 3)
+                    eng_val = val / (10 ** exp)
+                    suffix = f"e{exp:+d}" if exp != 0 else ""
+                    print(f"{name:<15}: {eng_val:>12.6f}{suffix}")
+                else:
+                    print(f"{name:<15}: {val}")
+                break
