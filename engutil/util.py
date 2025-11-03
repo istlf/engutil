@@ -136,6 +136,7 @@ def find_max(f, H, f_range=None):
 
     f0 = f[max_idx]
     H_max = np.abs(H[max_idx])
+    
     return f0, H_max, max_idx
 
 

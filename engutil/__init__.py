@@ -21,8 +21,8 @@ from .plotting import (
     read_ltspice_export
 )
 
-from .electrical import (
-    acoustic_params
+from .acoustics import (
+    radiation_impedance_piston_in_baffle
 )
 
 from .util import (
@@ -61,7 +61,7 @@ __all__ = [
     "reload_self",
     "plot_zplane",
 
-    "acoustic_params",
+    "radiation_impedance_piston_in_baffle",
 
     "load_complex_csv",
     "open_csv",
