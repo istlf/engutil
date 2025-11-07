@@ -175,6 +175,77 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 
 
 
+# def plot_bode(freqs, responses,
+#             title="Bode Plot",
+#             xlabel="Frequency $f$ / Hz",
+#             ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
+#             ylabel_right="Phase $\\angle H$ / $^\\circ$",
+#             legends=None,
+#             xlim=None,
+#             save_loc=None,
+#             return_fig=False):
+#     """
+#     Colorblind-friendly Bode plot using the Okabe–Ito palette.
+#     Use: 
+#     fig, ax1, ax2 = engutil.plot_bode(f_tweeter, [(t_mag, t_phase)], title="Tweeter", return_fig=True)
+#     ax1.scatter(f0, H_max, color='k', marker='o')
+#     ax1.legend(["t_mag", "scatter"])
+#     ax2.legend(["phase"])
+#     """
+#     init_latex()
+#     fig, ax1 = plt.subplots(figsize=(12,6))
+
+#     # Okabe–Ito colorblind-safe palette
+#     colors = [
+#          "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+#         "#0072B2", "#D55E00", "#CC79A7","#999999"
+#     ]
+
+#     if legends is None:
+#         legends = [f"Response {i+1}" for i in range(len(responses))]
+
+#     # Left y-axis: magnitude
+#     for i, (Z_mag, _) in enumerate(responses):
+#         ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)],
+#                      label=f"{legends[i]} $\\textrm{{(Mag)}}$")
+#     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
+#     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
+#     ax1.tick_params(axis='y', labelcolor='tab:blue')
+#     ax1.grid(True, which="both", ls="--", lw=0.7)
+
+#     # Right y-axis: phase
+#     ax2 = ax1.twinx()
+#     phase_plotted = False
+#     for i, (_, Z_phase) in enumerate(responses):
+#         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
+#             ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)],
+#                          linestyle="--", label=f"{legends[i]} $\\textrm{{(Phase)}}$")
+#             phase_plotted = True
+
+#     if phase_plotted:
+#         ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
+#         ax2.tick_params(axis='y', labelcolor='tab:red')
+#     else:
+#         fig.delaxes(ax2)
+
+#     # Combined legend
+#     lines_1, labels_1 = ax1.get_legend_handles_labels()
+#     lines_2, labels_2 = ax2.get_legend_handles_labels()
+#     labels_all = [f"$\\textrm{{{lbl}}}$" for lbl in (labels_1 + labels_2)]
+#     ax1.legend(lines_1 + lines_2, labels_all, loc='best')
+
+#     plt.title(f"$\\textrm{{{title}}}$")
+    
+#     if xlim is not None:
+#         plt.xlim(xlim)
+#     plt.tight_layout()
+#     if save_loc:
+#         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
+#         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
+#     if return_fig:
+#         return fig, ax1, ax2, plt if phase_plotted else None
+#     plt.show()
+
 def plot_bode(freqs, responses,
             title="Bode Plot",
             xlabel="Frequency $f$ / Hz",
@@ -184,33 +255,23 @@ def plot_bode(freqs, responses,
             xlim=None,
             save_loc=None,
             return_fig=False):
-    """
-    Colorblind-friendly Bode plot using the Okabe–Ito palette.
-    Use: 
-    fig, ax1, ax2 = engutil.plot_bode(f_tweeter, [(t_mag, t_phase)], title="Tweeter", return_fig=True)
-    ax1.scatter(f0, H_max, color='k', marker='o')
-    ax1.legend(["t_mag", "scatter"])
-    ax2.legend(["phase"])
-    """
+
     init_latex()
     fig, ax1 = plt.subplots(figsize=(12,6))
 
-    # Okabe–Ito colorblind-safe palette
-    colors = [
-        "#E69F00", "#56B4E9", "#009E73", "#F0E442",
-        "#0072B2", "#D55E00", "#CC79A7", "#999999"
-    ]
+    color_left = 'tab:blue'
+    color_right = 'tab:red'
 
     if legends is None:
-        legends = [f"Response {i+1}" for i in range(len(responses))]
+        legends = [f"\\textrm{{Response}} ${i+1}$" for i in range(len(responses))]
 
     # Left y-axis: magnitude
     for i, (Z_mag, _) in enumerate(responses):
-        ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)],
-                     label=f"{legends[i]} (Mag)")
+        ax1.semilogx(freqs, Z_mag, color=color_left,
+                     label=f"{legends[i]} $\\textrm{{(Mag)}}$")
     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
-    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color=color_left)
+    ax1.tick_params(axis='y', labelcolor=color_left)
     ax1.grid(True, which="both", ls="--", lw=0.7)
 
     # Right y-axis: phase
@@ -218,13 +279,13 @@ def plot_bode(freqs, responses,
     phase_plotted = False
     for i, (_, Z_phase) in enumerate(responses):
         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
-            ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)],
-                         linestyle="--", label=f"{legends[i]} (Phase)")
+            ax2.semilogx(freqs, Z_phase, color=color_right,
+                         linestyle="--", label=f"{legends[i]} $\\textrm{{(Phase)}}$")
             phase_plotted = True
 
     if phase_plotted:
-        ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
-        ax2.tick_params(axis='y', labelcolor='tab:red')
+        ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color=color_right)
+        ax2.tick_params(axis='y', labelcolor=color_right)
     else:
         fig.delaxes(ax2)
 
@@ -243,7 +304,7 @@ def plot_bode(freqs, responses,
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
     if return_fig:
-        return fig, ax1, ax2 if phase_plotted else None
+        return fig, ax1, ax2, plt if phase_plotted else None
     plt.show()
 
 
