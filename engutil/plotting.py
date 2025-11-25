@@ -175,6 +175,7 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 
 
 
+
 # def plot_bode(freqs, responses,
 #             title="Bode Plot",
 #             xlabel="Frequency $f$ / Hz",
@@ -184,53 +185,51 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 #             xlim=None,
 #             save_loc=None,
 #             return_fig=False):
-#     """
-#     Colorblind-friendly Bode plot using the Okabe–Ito palette.
-#     Use: 
-#     fig, ax1, ax2 = engutil.plot_bode(f_tweeter, [(t_mag, t_phase)], title="Tweeter", return_fig=True)
-#     ax1.scatter(f0, H_max, color='k', marker='o')
-#     ax1.legend(["t_mag", "scatter"])
-#     ax2.legend(["phase"])
-#     """
+
 #     init_latex()
 #     fig, ax1 = plt.subplots(figsize=(12,6))
 
-#     # Okabe–Ito colorblind-safe palette
-#     colors = [
-#          "#E69F00", "#56B4E9", "#009E73", "#F0E442",
-#         "#0072B2", "#D55E00", "#CC79A7","#999999"
+#     # colorblind-friendly palette (will cycle if more responses than colors)
+#     palette = [
+#         "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+#         "#0072B2", "#D55E00", "#CC79A7", "#999999"
 #     ]
 
 #     if legends is None:
-#         legends = [f"Response {i+1}" for i in range(len(responses))]
+#         legends = [f"\\textrm{{Response}} ${i+1}$" for i in range(len(responses))]
 
-#     # Left y-axis: magnitude
+#     # Left y-axis: magnitude (use palette colors, solid lines)
 #     for i, (Z_mag, _) in enumerate(responses):
-#         ax1.semilogx(freqs, Z_mag, color=colors[i % len(colors)],
-#                      label=f"{legends[i]} $\\textrm{{(Mag)}}$")
+#         color = palette[i % len(palette)]
+#         ax1.semilogx(freqs, Z_mag, color=color,
+#                      label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{(Mag)}}$",
+#                      linestyle='-')
 #     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
-#     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color='tab:blue')
-#     ax1.tick_params(axis='y', labelcolor='tab:blue')
+#     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$")
 #     ax1.grid(True, which="both", ls="--", lw=0.7)
 
-#     # Right y-axis: phase
+#     # Right y-axis: phase (use same palette colors per response, dashed)
 #     ax2 = ax1.twinx()
 #     phase_plotted = False
 #     for i, (_, Z_phase) in enumerate(responses):
 #         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
-#             ax2.semilogx(freqs, Z_phase, color=colors[i % len(colors)],
-#                          linestyle="--", label=f"{legends[i]} $\\textrm{{(Phase)}}$")
+#             color = palette[i % len(palette)]
+#             ax2.semilogx(freqs, Z_phase, color=color,
+#                          linestyle="--", label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{(Phase)}}$")
 #             phase_plotted = True
 
 #     if phase_plotted:
-#         ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color='tab:red')
-#         ax2.tick_params(axis='y', labelcolor='tab:red')
+#         ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$")
 #     else:
 #         fig.delaxes(ax2)
 
 #     # Combined legend
 #     lines_1, labels_1 = ax1.get_legend_handles_labels()
-#     lines_2, labels_2 = ax2.get_legend_handles_labels()
+#     # if ax2 was removed, get_legend_handles_labels on it would error; guard accordingly
+#     if phase_plotted:
+#         lines_2, labels_2 = ax2.get_legend_handles_labels()
+#     else:
+#         lines_2, labels_2 = [], []
 #     labels_all = [f"$\\textrm{{{lbl}}}$" for lbl in (labels_1 + labels_2)]
 #     ax1.legend(lines_1 + lines_2, labels_all, loc='best')
 
@@ -243,8 +242,11 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 #         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
 #         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
 #     if return_fig:
-#         return fig, ax1, ax2, plt if phase_plotted else None
+#         return fig, ax1, (ax2 if phase_plotted else None), plt
 #     plt.show()
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 def plot_bode(freqs, responses,
             title="Bode Plot",
@@ -252,46 +254,67 @@ def plot_bode(freqs, responses,
             ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
             ylabel_right="Phase $\\angle H$ / $^\\circ$",
             legends=None,
+            styles=None,  # <--- NEW FLAG
             xlim=None,
             save_loc=None,
             return_fig=False):
 
-    init_latex()
+    init_latex() # Assuming this is defined in your environment
     fig, ax1 = plt.subplots(figsize=(12,6))
 
-    color_left = 'tab:blue'
-    color_right = 'tab:red'
+    # colorblind-friendly palette
+    palette = [
+        "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+        "#0072B2", "#D55E00", "#CC79A7", "#999999"
+    ]
 
     if legends is None:
         legends = [f"\\textrm{{Response}} ${i+1}$" for i in range(len(responses))]
 
-    # Left y-axis: magnitude
+    # Default to solid lines if no styles provided
+    if styles is None:
+        styles = ['-'] * len(responses)
+
+    # Left y-axis: Magnitude (Uses the provided 'style' for the trace)
     for i, (Z_mag, _) in enumerate(responses):
-        ax1.semilogx(freqs, Z_mag, color=color_left,
-                     label=f"{legends[i]} $\\textrm{{(Mag)}}$")
+        color = palette[i % len(palette)]
+        style = styles[i % len(styles)] # Cycle styles if fewer than responses
+        
+        # We pass 'style' as the fmt argument (3rd positional)
+        # This handles both linestyles ('-') and markers ('.') automatically
+        ax1.semilogx(freqs, Z_mag, style, color=color,
+                     label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{(Mag)}}$")
+                     
     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
-    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$", color=color_left)
-    ax1.tick_params(axis='y', labelcolor=color_left)
+    ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$")
     ax1.grid(True, which="both", ls="--", lw=0.7)
 
-    # Right y-axis: phase
+    # Right y-axis: Phase (Always dashed to differentiate from Mag)
     ax2 = ax1.twinx()
     phase_plotted = False
     for i, (_, Z_phase) in enumerate(responses):
         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
-            ax2.semilogx(freqs, Z_phase, color=color_right,
-                         linestyle="--", label=f"{legends[i]} $\\textrm{{(Phase)}}$")
+            color = palette[i % len(palette)]
+            
+            # Phase is always dashed '--' to distinguish from Magnitude
+            ax2.semilogx(freqs, Z_phase, color=color,
+                         linestyle="--", 
+                         label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{(Phase)}}$")
             phase_plotted = True
 
     if phase_plotted:
-        ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$", color=color_right)
-        ax2.tick_params(axis='y', labelcolor=color_right)
+        ax2.set_ylabel(f"$\\textrm{{{ylabel_right}}}$")
     else:
         fig.delaxes(ax2)
 
     # Combined legend
     lines_1, labels_1 = ax1.get_legend_handles_labels()
-    lines_2, labels_2 = ax2.get_legend_handles_labels()
+    if phase_plotted:
+        lines_2, labels_2 = ax2.get_legend_handles_labels()
+    else:
+        lines_2, labels_2 = [], []
+        
+    # Formatting legend labels to LaTeX
     labels_all = [f"$\\textrm{{{lbl}}}$" for lbl in (labels_1 + labels_2)]
     ax1.legend(lines_1 + lines_2, labels_all, loc='best')
 
@@ -304,9 +327,8 @@ def plot_bode(freqs, responses,
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
     if return_fig:
-        return fig, ax1, ax2, plt if phase_plotted else None
+        return fig, ax1, (ax2 if phase_plotted else None), plt
     plt.show()
-
 
 def read_ltspice_export(file_path):
     """Read LTSpice exported AC analysis file."""

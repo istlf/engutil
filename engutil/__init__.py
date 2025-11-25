@@ -33,7 +33,9 @@ from .util import (
     find_max,
     find_f1_f2,
     round_to_E,
-    pprint
+    pprint,
+    write_ltspice_params,
+    percent
 )
 def reload_self():
 
@@ -70,6 +72,8 @@ __all__ = [
     "find_max",
     "find_f1_f2",
     "round_to_E",
-    "pprint"
+    "pprint",
+    "write_ltspice_params",
+    "percent"
 
 ]

@@ -54,8 +54,8 @@ def read_bode_csv(file_name):
     phase = np.unwrap(np.angle(data))*180/np.pi
     return mag, phase
 
-def tf_to_magphase(H):
-    mag_db = 20*np.log10(np.abs(H))
+def tf_to_magphase(H, ref=1):
+    mag_db = 20*np.log10(np.abs(H/ref))
     mag_lin = np.abs(H)
     phase = np.unwrap(np.angle(H)*180/np.pi)
 
@@ -165,3 +165,31 @@ def pprint(*args, eng=True):
                 else:
                     print(f"{name:<15}: {val}")
                 break
+
+
+
+def percent(a, b, decimals=2):
+    """
+        Writes out the difference of a relative to b 
+    """
+    p = (a - b) / b * 100
+    
+    return p
+
+
+def write_ltspice_params(params, file):
+    """ 
+Usage: 
+
+params = {
+    "L_E": L_e,
+    "R_E": R_E,
+    "Bl": Bl,
+}
+
+engutil.write_ltspice_params(params, "simulations/vent_params.txt")
+
+    """ 
+    with open(file, "w") as f:
+        for name, value in params.items():
+            f.write(f".param {name}={value}\n")

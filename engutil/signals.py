@@ -45,6 +45,7 @@ def generate_time(length, fs=44100):
 
 def make_spectrum(x, fs, scaling=False, oneside=False):
     """
+       freq, Y, YDB = engutil.make_spectrum(x, fs, scaling=False, oneside=False)
         Calculates the frequency spectrum of a signal with correct scaling.
 
         If 'oneside' and 'scaling' are both True, it computes a one-sided 
@@ -61,6 +62,8 @@ def make_spectrum(x, fs, scaling=False, oneside=False):
                 - freq (np.ndarray): Frequency vector.
                 - Y (np.ndarray): Complex FFT result (scaled if requested).
                 - YDB (np.ndarray): FFT result in decibels.
+
+       
     """
     x = np.asarray(x)
     N = len(x)

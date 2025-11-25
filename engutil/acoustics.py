@@ -1,6 +1,6 @@
 import numpy as np 
 
-def radiation_impedance_piston_in_baffle(a, rho=1.2, c=344):
+def radiation_impedance_piston_in_baffle(a, rho=1.18, c=344):
     """
         takes a radius a (and maybe a density rho and speed of sound c) to give
         M_A1, R_A1, R_A2 and C_A
