@@ -31,11 +31,15 @@ from .util import (
     read_bode_csv,
     tf_to_magphase,
     find_max,
+    find_min,
     find_f1_f2,
     round_to_E,
     pprint,
     write_ltspice_params,
-    percent
+    percent,
+    mag2db,
+    db2mag
+    
 )
 def reload_self():
 
@@ -70,10 +74,13 @@ __all__ = [
     "read_bode_csv",
     "tf_to_magphase",
     "find_max",
+    "find_min",
     "find_f1_f2",
     "round_to_E",
     "pprint",
     "write_ltspice_params",
-    "percent"
+    "percent",
+    "mag2db",
+    "db2mag"
 
 ]

@@ -139,14 +139,42 @@ def find_max(f, H, f_range=None):
     
     return f0, H_max, max_idx
 
+def find_min(f, H, f_range=None):
+    """
+    Find the minimum magnitude in H, optionally within a frequency range.
 
-# def pprint(*args):
-#     frame = inspect.currentframe().f_back
-#     for var in args:
-#         for name, val in frame.f_locals.items():
-#             if var is val:
-#                 print(f"{name:<15}: {val:.5e}")
-#                 break
+    Parameters
+    ----------
+    f : array_like
+        Frequency array.
+    H : array_like
+        Response array (complex or real).
+    f_range : tuple or list, optional
+        (f_min, f_max) range to search within.
+
+    Returns
+    -------
+    f0 : float
+        Frequency of minimum.
+    H_min : float
+        Minimum magnitude.
+    min_idx : int
+        Index of minimum in the full array.
+    """
+    if f_range is not None:
+        mask = (f >= f_range[0]) & (f <= f_range[1])
+        f_sub, H_sub = f[mask], H[mask]
+        rel_idx = np.argmin(np.abs(H_sub))
+        min_idx = np.where(mask)[0][rel_idx]
+    else:
+        min_idx = np.argmin(np.abs(H))
+
+    f0 = f[min_idx]
+    H_min = np.abs(H[min_idx])
+    
+    return f0, H_min, min_idx
+
+
 
 def pprint(*args, eng=True):
     frame = inspect.currentframe().f_back
@@ -193,3 +221,10 @@ engutil.write_ltspice_params(params, "simulations/vent_params.txt")
     with open(file, "w") as f:
         for name, value in params.items():
             f.write(f".param {name}={value}\n")
+
+
+def mag2db(x):
+    return 20*np.log10(np.abs(x))
+
+def db2mag(x):
+    return 10^(x/20)
