@@ -6,7 +6,6 @@ from itertools import cycle
 from matplotlib.patches import Circle
 
 from pathlib import Path
-import scienceplots
 
 def init_latex():
     plt.rcParams.update({
