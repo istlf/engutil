@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import cycle
 from matplotlib.patches import Circle
-import mplcursors
+
 from pathlib import Path
 import scienceplots
 
