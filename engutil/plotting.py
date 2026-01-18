@@ -320,7 +320,7 @@ def plot_bode(freqs, responses,
     if return_fig:
         return fig, ax1, (ax2 if phase_plotted else None), plt
 
-    mplcursors.cursor()
+    # mplcursors.cursor()
     plt.show()
 
 def read_ltspice_export(file_path):
