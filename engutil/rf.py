@@ -42,7 +42,8 @@ class TwoPortNetwork:
 
     @property
     def MSG(self):
-        return np.abs(self.S21)/np.abs(self.S12)
+        return 10*np.log10(np.abs(self.S21)/np.abs(self.S12))
+        
 
     @property
     def MAG(self):
@@ -90,3 +91,5 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     G_T = term_source * term_transistor * term_load
     
     return G_T
+
+
