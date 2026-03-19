@@ -24,7 +24,12 @@ from .plotting import (
 from .acoustics import (
     radiation_impedance_piston_in_baffle
 )
-
+from .rf import (
+    TwoPortNetwork,
+    to_cartesian,
+    to_polar,
+    calc_transducer_gain
+)
 from .util import (
     load_complex_csv,
     open_csv,
@@ -38,9 +43,14 @@ from .util import (
     write_ltspice_params,
     percent,
     mag2db,
-    db2mag
+    db2mag,
+    pol2cart,
+    cart2pol,
+    load_ads_csv
     
 )
+
+
 def reload_self():
 
     """Reload engutil and all its submodules (for Jupyter dev use)."""
@@ -69,6 +79,12 @@ __all__ = [
 
     "radiation_impedance_piston_in_baffle",
 
+    "TwoPortNetwork",
+    "to_cartesian",
+    "to_polar",
+    "calc_transducer_gain",
+
+    
     "load_complex_csv",
     "open_csv",
     "read_bode_csv",
@@ -81,6 +97,9 @@ __all__ = [
     "write_ltspice_params",
     "percent",
     "mag2db",
-    "db2mag"
+    "db2mag",
+    "cart2pol",
+    "pol2cart",
+    "load_ads_csv"
 
 ]

@@ -2,6 +2,49 @@ import numpy as np
 import math 
 import inspect
 import sympy as sp 
+import pandas as pd 
+import re
+
+def load_ads_csv(path, freq_col="freq"):
+    df = pd.read_csv(path)
+
+    # remove ADS metadata from column names
+    df.columns = [c.split("\n")[0] for c in df.columns]
+
+    # convert frequency column with mixed units
+    if freq_col in df.columns:
+        parts = df[freq_col].astype(str).str.extract(r'([\d.]+)\s*([A-Za-z]+)')
+        value = parts[0].astype(float)
+        unit = parts[1]
+
+        scale = {
+            "Hz": 1,
+            "kHz": 1e3,
+            "MHz": 1e6,
+            "GHz": 1e9
+        }
+
+        df[freq_col] = value * unit.map(scale)
+
+    return df
+
+
+
+def cart2pol(x, y):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return (rho, phi)
+
+# def pol2cart(rho, phi):
+#     x = rho * np.cos(phi)
+#     y = rho * np.sin(phi)
+#     return x + 1j*y
+#     #return(x, y)
+
+def pol2cart(polar):
+    rho, phi = polar
+    phi *= np.pi/180
+    return rho * np.exp(1j * phi)
 
 
 def load_complex_csv(path, single_line=False):

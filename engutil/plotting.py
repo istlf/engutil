@@ -6,6 +6,8 @@ from itertools import cycle
 from matplotlib.patches import Circle
 
 from pathlib import Path
+from typing import Sequence, Tuple, Optional
+
 
 def init_latex():
     plt.rcParams.update({
@@ -17,7 +19,7 @@ def init_latex():
 
 def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
                ylabel="Amplitude", save_loc="def", xlim=None,ylim=None,
-               plot_func=plt.plot, style_cycle=None, grid=None, xticks=None, yticks=None):
+               plot_func=plt.plot, style_cycle=None, grid=None, xticks=None, yticks=None, figsize=(12,6)):
     """ wrapper function for plotting. a few examples:
 
 
@@ -33,7 +35,7 @@ def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
     if legends is None:
         legends = [None] * len(data_list)
     
-    plt.figure() # 
+    plt.figure(figsize=figsize) # 
     style_iter = cycle(style_cycle) if style_cycle else None
 
     for (x, y), label in zip(data_list, legends):
@@ -79,7 +81,7 @@ def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
         if isinstance(yticks, tuple) and len(yticks) == 2:
             plt.yticks(*_wrap_labels(yticks))
         else:
-            plt.yticks(xticks)
+            plt.yticks(yticks)
     
     if any(lbl is not None for lbl in legends):
         plt.legend()
@@ -97,15 +99,26 @@ def _plot_core(data_list, legends=None, title="title", xlabel="Time [s]",
         # os.makedirs("figures", exist_ok=True)
         base = os.path.splitext(save_loc)[0]
         plt.savefig(f"{base}.svg")
-        plt.savefig(f"{base}.png")
 
     plt.show()
 
 def plot_time_series(data_list, legends=None, **kwargs):
-    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-    style_cycle = [(c, '-', None) for c in colors]
-    _plot_core(data_list, legends=legends, plot_func=plt.plot,
-               style_cycle=style_cycle, **kwargs)
+
+
+    # The requested Wong/Okabe-Ito color palette (Colorblind friendly)
+    palette = [
+        "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+        "#0072B2", "#D55E00", "#CC79A7", "#999999"
+    ]
+    
+    # Check if style_cycle was passed manually in kwargs, otherwise create it
+    if 'style_cycle' not in kwargs:
+        # Create a tuple of (color, linestyle, marker)
+        # Defaulting to solid lines ('-') and no marker (None)
+        style_cycle = [(c, '-', None) for c in palette]
+        kwargs['style_cycle'] = style_cycle
+
+    _plot_core(data_list, legends=legends, plot_func=plt.plot, **kwargs)
 
 def stem_time_series(data_list, legends=None, **kwargs):
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -179,54 +192,138 @@ def plot_real_phase(freq, Y, title="Spectrum Analysis", xlabel="Frequency [Hz]",
 
 
 
-def plot_bode(freqs, responses,
-            title="Bode Plot",
-            xlabel="Frequency $f$ / Hz",
-            ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
-            ylabel_right="Phase $\\angle H$ / $^\\circ$",
-            legends=None,
-            styles=None, 
-            color_indices=None,  # <--- NEW ARGUMENT
-            xlim=None,
-            ylim_left=None,
-            ylim_right=None,
-            save_loc=None,
-            return_fig=False):
+def plot_bode(
+    freqs,
+    responses,
+    title="Bode Plot",
+    xlabel="Frequency $f$ / Hz",
+    ylabel_left="Magnitude $\\left| H \\right|$ / dB re 1 V/V",
+    ylabel_right="Phase $\\angle H$ / $^\\circ$",
+    legends=None,
+    styles=None,
+    color_indices=None,
+    xlim=None,
+    ylim_left=None,
+    ylim_right=None,
+    save_loc=None,
+    return_fig=False,
+    logx=True,
+):
     """
+    Plot magnitude and phase responses in a Bode-style diagram.
 
-    usage example: 
+    Parameters
+    ----------
+    freqs : array-like
+        Frequency vector.
 
-    fig, ax1, ax2, _ = engutil.plot_bode(
-        fn, 
-        [
-            (vent_total_ff_db, None), # Meas Vent
-            (dia_ff_db, None),        # Meas Dia
-            (total_ff_db, None),      # Meas Total
-            
-            (sim_vent_db, None),      # Sim Vent
-            (sim_dia_db, None),       # Sim Dia
-            (sim_total_db, None)      # Sim Total
-        ], 
-        legends=["Vent - measured", "Diaphragm - measured", "Total - measured", "Vent - simulated", "Diaphragm - simulated", "Total - simulated"],
-        
-        # Measured are Solid, Sims are Dashed
-        styles=["-", "-", "-", "--", "--", "--"], 
-        
-        # REUSE colors 0, 1, 2 for the second batch!
-        color_indices=[0, 1, 2, 0, 1, 2], 
-        xlim=(10, 100),
-        ylim=(20, 90),
-        title="Comparison of Measured vs Simulated",
-        return_fig=True
-    )
+    responses : list of tuple
+        List of response tuples:
 
+        `(magnitude, phase)`
 
+        where:
+        - `magnitude` : array-like (required)
+        - `phase` : array-like or None
+
+        If phase is `None`, only magnitude is plotted.
+
+    title : str, optional
+        Plot title.
+
+    xlabel : str, optional
+        Label for the frequency axis.
+
+    ylabel_left : str, optional
+        Label for the magnitude axis.
+
+    ylabel_right : str, optional
+        Label for the phase axis.
+
+    legends : list of str, optional
+        Labels for each response.
+
+    styles : list of str, optional
+        Line styles or markers for magnitude traces.
+        Example: `["-", "--", "."]`.
+
+    color_indices : list of int, optional
+        Indices into the internal color palette. Useful when multiple
+        traces should reuse the same colors.
+
+    xlim : tuple(float, float), optional
+        Frequency axis limits.
+
+    ylim_left : tuple(float, float), optional
+        Magnitude axis limits.
+
+    ylim_right : tuple(float, float), optional
+        Phase axis limits.
+
+    save_loc : str or pathlib.Path, optional
+        Path where the figure should be saved. The plot is saved as
+        both `.png` and `.svg`.
+
+    return_fig : bool, optional
+        If True, returns the figure and axes objects instead of calling
+        `plt.show()`.
+
+    logx : bool, optional
+        If True (default), use logarithmic frequency axis (`semilogx`).
+        If False, use linear frequency axis.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Figure object.
+
+    ax_mag : matplotlib.axes.Axes
+        Magnitude axis.
+
+    ax_phase : matplotlib.axes.Axes or None
+        Phase axis (None if no phase responses were plotted).
+
+    plt : matplotlib.pyplot
+        Matplotlib pyplot module.
+
+    Examples
+    --------
+    Compare measured and simulated responses:
+
+    >>> fig, ax1, ax2, _ = engutil.plot_bode(
+    ...     fn,
+    ...     [
+    ...         (vent_total_ff_db, None),
+    ...         (dia_ff_db, None),
+    ...         (total_ff_db, None),
+    ...         (sim_vent_db, None),
+    ...         (sim_dia_db, None),
+    ...         (sim_total_db, None),
+    ...     ],
+    ...     legends=[
+    ...         "Vent - measured",
+    ...         "Diaphragm - measured",
+    ...         "Total - measured",
+    ...         "Vent - simulated",
+    ...         "Diaphragm - simulated",
+    ...         "Total - simulated",
+    ...     ],
+    ...     styles=["-", "-", "-", "--", "--", "--"],
+    ...     color_indices=[0, 1, 2, 0, 1, 2],
+    ...     xlim=(10, 100),
+    ...     ylim=(20, 90),
+    ...     title="Comparison of Measured vs Simulated",
+    ...     return_fig=True,
+    ... )
     """
 
 
     #plt.style.use(['science'])
     init_latex() # Assuming this is defined in your environment
     fig, ax1 = plt.subplots(figsize=(12,6))
+    
+    _plot_func_ax1 = ax1.semilogx if logx else ax1.plot
+    
 
     # colorblind-friendly palette
     palette = [
@@ -259,14 +356,15 @@ def plot_bode(freqs, responses,
         # We pass 'style' as the fmt argument (3rd positional)
         # This handles both linestyles ('-') and markers ('.') automatically
         ax1.semilogx(freqs, Z_mag, style, color=color,
-                     label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{(Mag)}}$")
-                     
+                     label=f"$\\textrm{{{legends[i]}}}$ $\\textrm{{}}$")
+            
     ax1.set_xlabel(f"$\\textrm{{{xlabel}}}$")
     ax1.set_ylabel(f"$\\textrm{{{ylabel_left}}}$")
     ax1.grid(True, which="both", ls="--", lw=0.7)
 
     # Right y-axis: Phase (Always dashed to differentiate from Mag)
     ax2 = ax1.twinx()
+    _plot_func_ax2 = ax2.semilogx if logx else ax2.plot
     phase_plotted = False
     for i, (_, Z_phase) in enumerate(responses):
         if isinstance(Z_phase, (np.ndarray, list)) and np.any(Z_phase):
@@ -317,11 +415,14 @@ def plot_bode(freqs, responses,
         save_loc.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(f"{save_loc}.png", bbox_inches="tight")
         plt.savefig(f"{save_loc}.svg", bbox_inches="tight")
-    if return_fig:
+        
+    if return_fig is True:
+        plt.close(fig)
         return fig, ax1, (ax2 if phase_plotted else None), plt
-
+    else:
+        plt.show()
     # mplcursors.cursor()
-    plt.show()
+    
 
 def read_ltspice_export(file_path):
     """Read LTSpice exported AC analysis file."""
