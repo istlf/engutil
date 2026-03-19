@@ -92,4 +92,5 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     
     return G_T
 
+# ASKE WAS HERE
 
