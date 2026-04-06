@@ -271,3 +271,72 @@ def mag2db(x):
 
 def db2mag(x):
     return 10^(x/20)
+
+
+def generate_noise_figure_latex_table(F, CF, RF):
+    """
+    Generates a LaTeX table string from Noise Figure, 
+    Center (polar tuples), and Radii arrays.
+    """
+    latex_str = (
+        "\\begin{table}[H]\n"
+        "\\centering\n"
+        "\\begin{tabular}{|c|c|c|}\n"
+        "\\hline\n"
+        " $F$ (dB) & Center ($|\\Gamma_c| \\angle \\theta$) & Radius ($R_F$) \\\\\n"
+        "\\hline\n"
+    )
+
+    for i in range(len(F)):
+        # Unpack the polar tuple (magnitude, angle)
+        mag, angle = CF[i]
+        
+        # Add a row to the table
+        # Format: F | mag ∠ angle | radius
+        row = (f" {F[i]:.2f} & {mag:.3f} $\\angle$ {angle:.1f}$^\\circ$ "
+               f"& {RF[i]:.3f} \\\\\n")
+        latex_str += row
+
+    latex_str += (
+        "\\hline\n"
+        "\\end{tabular}\n"
+        "\\caption{Noise Figure Circle Centers and Radii}\n"
+        "\\label{tab:noise_circles}\n"
+        "\\end{table}"
+    )
+    
+    return latex_str
+
+def generate_available_gain_latex_table(Ga, Ca, Ra):
+    """
+    Generates a LaTeX table string from available gain, 
+    Center (polar tuples), and Radii arrays.
+    """
+    latex_str = (
+        "\\begin{table}[H]\n"
+        "\\centering\n"
+        "\\begin{tabular}{|c|c|c|}\n"
+        "\\hline\n"
+        " $G_a$ (dB) & Center ($|\\Gamma_a| \\angle \\theta$) & Radius ($R_a$) \\\\\n"
+        "\\hline\n"
+    )
+
+    for i in range(len(Ga)):
+        # Unpack the polar tuple (magnitude, angle)
+        mag, angle = Ca[i]
+        
+        # Add a row to the table
+        # Format: F | mag ∠ angle | radius
+        row = (f" {Ga[i]:.2f} & {mag:.3f} $\\angle$ {angle:.1f}$^\\circ$ "
+               f"& {Ra[i]:.3f} \\\\\n")
+        latex_str += row
+
+    latex_str += (
+        "\\hline\n"
+        "\\end{tabular}\n"
+        "\\caption{Available gain circles centers and radii}\n"
+        "\\label{tab:gain_circles}\n"
+        "\\end{table}"
+    )
+    
+    return latex_str
