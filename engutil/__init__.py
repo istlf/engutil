@@ -28,7 +28,9 @@ from .rf import (
     TwoPortNetwork,
     to_cartesian,
     to_polar,
-    calc_transducer_gain
+    calc_transducer_gain,
+    noise_figure_circle,
+    available_gain_circle
 )
 from .util import (
     load_complex_csv,
@@ -46,8 +48,9 @@ from .util import (
     db2mag,
     pol2cart,
     cart2pol,
-    load_ads_csv
-    
+    load_ads_csv,
+    generate_noise_figure_latex_table,
+    generate_available_gain_latex_table 
 )
 
 

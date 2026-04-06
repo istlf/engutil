@@ -49,7 +49,7 @@ class TwoPortNetwork:
     def MAG(self):
         return np.abs(self.S21)/np.abs(self.S12)*(self.K - np.sqrt(self.K**2 - 1))
 
-
+    @property
     def get_source_stability_circle(self):
         """Calculates Center and Radius for the Source Stability Circle (Gamma_S plane)"""
         D = self.delta
@@ -58,6 +58,7 @@ class TwoPortNetwork:
         R_s = np.abs(self.S12 * self.S21) / np.abs(np.abs(self.S11)**2 - np.abs(D)**2)
         return C_s, R_s
 
+    @property
     def get_load_stability_circle(self):
         """Calculates Center and Radius for the Load Stability Circle (Gamma_L plane)"""
         D = self.delta
@@ -92,5 +93,35 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     
     return G_T
 
-# ASKE WAS HERE
+def noise_figure_circle(gamma_opt, Fmin, RN, Z0, F):
+    """
+    Calculates the constant noise figure circle at noise figure F
+    """
+    N = (F - Fmin)/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
+    # print(f"N={N}")
+    CF = gamma_opt/(N+1)
+    RF = np.sqrt(N*(N + 1 - np.abs(gamma_opt)**2))/(N+1)
 
+    return CF, RF
+
+def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
+    """
+    Calculates the center (Ca) and radius (ra) of available gain circles 
+    using the provided S-parameters and gain factor.
+    """
+    
+    ga = Ga/(np.abs(S21)**2)
+
+    c1 = S11 - delta * np.conj(S22)
+    
+    denominator = 1 + ga * (np.abs(S11)**2 - np.abs(delta)**2)
+    
+    ca = (ga * np.conj(c1)) / denominator
+    
+    s12_s21_mag = np.abs(S12 * S21)
+    
+    ra_numerator = np.sqrt(1 - 2 * K * s12_s21_mag * ga + (s12_s21_mag * ga)**2)
+    
+    ra = ra_numerator / np.abs(denominator)
+    
+    return ca, ra
