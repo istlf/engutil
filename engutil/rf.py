@@ -49,6 +49,31 @@ class TwoPortNetwork:
     def MAG(self):
         return np.abs(self.S21)/np.abs(self.S12)*(self.K - np.sqrt(self.K**2 - 1))
 
+    @property
+    def Gamma_Ms(self):
+        # Calculate stability factor K first to see if a match is even possible
+        # K = (1 - |S11|^2 - |S22|^2 + |delta|^2) / (2 * |S12 * S21|)
+        
+        B1 = 1 + np.abs(self.S11)**2 - np.abs(self.S22)**2 - np.abs(self.delta)**2
+        C1 = self.S11 - self.delta * np.conj(self.S22)
+        
+        # Cast the radicand to complex to avoid NaN if K < 1
+        radicand = np.array(B1**2 - 4 * np.abs(C1)**2, dtype=complex)
+        
+        # Try the minus sign (usually the one for |Gamma| < 1)
+        g_ms = (B1 - np.sqrt(radicand)) / (2 * C1)
+        
+        # If the result is outside the Smith Chart, use the plus sign
+        if np.abs(g_ms) > 1:
+            g_ms = (B1 + np.sqrt(radicand)) / (2 * C1)
+            
+        return g_ms
+    
+    @property
+    def Gamma_ML(self):
+        B2 = 1 + np.abs(self.S22)**2 - np.abs(self.S11)**2 - np.abs(self.delta)**2
+        C2 = self.S22 - self.delta*np.conjugate(self.S11)
+        return (B2 - np.sqrt(B2**2 - 4*np.abs(C2)**2))/(2*C2)
 
     def get_source_stability_circle(self):
         """Calculates Center and Radius for the Source Stability Circle (Gamma_S plane)"""
