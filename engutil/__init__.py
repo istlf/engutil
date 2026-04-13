@@ -50,7 +50,8 @@ from .util import (
     cart2pol,
     load_ads_csv,
     generate_noise_figure_latex_table,
-    generate_available_gain_latex_table 
+    generate_available_gain_latex_table,
+    to_db_pwr
 )
 
 

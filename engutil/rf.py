@@ -66,6 +66,21 @@ class TwoPortNetwork:
         C_l = np.conj(self.S22 - D * np.conj(self.S11)) / (np.abs(self.S22)**2 - np.abs(D)**2)
         R_l = np.abs(self.S12 * self.S21) / np.abs(np.abs(self.S22)**2 - np.abs(D)**2)
         return C_l, R_l
+    
+    @property
+    def U_figure_of_merit(self):
+        """Calculates the unilateral figure of merit"""
+        return (np.abs(self.S11) * np.abs(self.S12) * np.abs(self.S21) * np.abs(self.S22))/((1 - np.abs(self.S11)**2) * (1 - np.abs(self.S22)**2))
+    
+    @property
+    def Gs_max(self):
+        """Calculates Gs_max"""
+        return 1/(1 - np.abs(self.S11)**2)
+    
+    @property
+    def Gl_max(self):
+        """Calculates GL_max"""
+        return 1/(1 - np.abs(self.S22)**2)
 
 
 
