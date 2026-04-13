@@ -4,6 +4,8 @@ import inspect
 import sympy as sp 
 import pandas as pd 
 import re
+from typing import Tuple
+
 
 def load_ads_csv(path, freq_col="freq"):
     df = pd.read_csv(path)
@@ -271,6 +273,21 @@ def mag2db(x):
 
 def db2mag(x):
     return 10^(x/20)
+
+def to_cartesian(polar_tuple):
+    """
+    Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
+    """
+    mag, angle_deg = polar_tuple
+    return mag * np.exp(1j * np.deg2rad(angle_deg))
+
+def to_polar(complex_val):
+    """
+    Converts a complex number (a + jb) into a (magnitude, angle_in_degrees) tuple.
+    """
+    mag = np.abs(complex_val)
+    angle_deg = np.rad2deg(np.angle(complex_val))
+    return (mag, angle_deg)
 
 
 def generate_noise_figure_latex_table(F, CF, RF):
