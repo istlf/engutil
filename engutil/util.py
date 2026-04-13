@@ -357,3 +357,6 @@ def generate_available_gain_latex_table(Ga, Ca, Ra):
     )
     
     return latex_str
+
+def to_db_pwr(val):
+    return 10*np.log10(val)

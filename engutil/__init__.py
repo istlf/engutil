@@ -46,8 +46,12 @@ from .util import (
     load_ads_csv,
     generate_noise_figure_latex_table,
     generate_available_gain_latex_table,
+<<<<<<< HEAD
     to_cartesian,
     to_polar,
+=======
+    to_db_pwr
+>>>>>>> 88083d277322c048fbb015604bb686d0c3a25891
 )
 
 
