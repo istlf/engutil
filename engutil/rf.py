@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 def to_cartesian(polar_tuple):
     """
     Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
@@ -133,12 +133,14 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     
     return G_T
 
+def to_linear(val):
+    return 10**(val/10)
+
 def noise_figure_circle(gamma_opt, Fmin, RN, Z0, F):
     """
     Calculates the constant noise figure circle at noise figure F
     """
-    N = (F - Fmin)/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
-    # print(f"N={N}")
+    N = (to_linear(F) - to_linear(Fmin))/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
     CF = gamma_opt/(N+1)
     RF = np.sqrt(N*(N + 1 - np.abs(gamma_opt)**2))/(N+1)
 
@@ -150,7 +152,7 @@ def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
     using the provided S-parameters and gain factor.
     """
     
-    ga = Ga/(np.abs(S21)**2)
+    ga = to_linear(Ga)/(np.abs(S21)**2)
 
     c1 = S11 - delta * np.conj(S22)
     
@@ -165,3 +167,7 @@ def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
     ra = ra_numerator / np.abs(denominator)
     
     return ca, ra
+
+def reflection_2_impedance(gamma):
+    return (1 + gamma)/(1-gamma)
+    
