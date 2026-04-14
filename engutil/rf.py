@@ -42,11 +42,7 @@ class TwoPortNetwork:
         den = 2 * np.abs(self.S12 * self.S21)
         return num / den
 
-    # --- Gain Properties ---
-    @property
-    def max_stable_gain_db(self):
-
-        return 10 * np.log10(np.abs(self.S21) / np.abs(self.S12))
+   
 
     # --- Stability Circles ---
     @property
@@ -147,11 +143,38 @@ class TwoPortNetwork:
 
         return num/den 
 
+    # --- Gain Properties ---
+    @property
+    def max_stable_gain_db(self):
+        return 10 * np.log10(np.abs(self.S21) / np.abs(self.S12))
+    
+    @property 
+    def G_Smax(self):
+        return 1/(1 - np.abs(self.S11)**2)
+
+    @property 
+    def G_Lmax(self):
+        return 1/(1 - np.abs(self.S22)**2)
+    
+    @property
+    def G0(self):
+        return np.abs(self.S21)**2
+    
     @property 
     def G_TUmax(self):
         # 12.42 in Pozar 
-        term1 = 1/(1 - np.abs(self.S11)**2)
-        term2 = np.abs(self.S21)**2
-        term3 = 1/(1 - np.abs(self.S22)**2)
-        return term1*term2*term3
+        # assumes conjugate matchin
+        return self.G_Smax*self.G0*self.G_Lmax
+
+    @property
+    def G_Tmax(self):
+        # 12.43 in Pozar, assumes K > 1 ie. unconditionally stable
+        term1 = np.abs(self.S21)/np.abs(self.S12)
+        term2 = (self.K - np.sqrt(self.K**2 - 1))
     
+        return term1*term2
+
+    @property
+    def MSG(self):
+        # 12.44 in Pozar, maximum stable again - it is G_Tmax with K = 1
+        return np.abs(self.S21)/np.abs(self.S12)
