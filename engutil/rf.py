@@ -80,32 +80,7 @@ class TwoPortNetwork:
         ra = num_r / np.abs(den)
         
         return Circle(ca, ra, f"Ga={gain_db}dB")
-
-
-# def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
-#     """
-#     Calculates the center (Ca) and radius (ra) of available gain circles 
-#     using the provided S-parameters and gain factor.
-#     """
-    
-#     ga = Ga/(np.abs(S21)**2)
-
-#     c1 = S11 - delta * np.conj(S22)
-    
-#     denominator = 1 + ga * (np.abs(S11)**2 - np.abs(delta)**2)
-    
-#     ca = (ga * np.conj(c1)) / denominator
-    
-#     s12_s21_mag = np.abs(S12 * S21)
-    
-#     ra_numerator = np.sqrt(1 - 2 * K * s12_s21_mag * ga + (s12_s21_mag * ga)**2)
-    
-#     ra = ra_numerator / np.abs(denominator)
-    
-#     return ca, ra
-
-
-
+   
     # --- Noise Figure Circles ---
     def noise_circle(self, F_target_db: float) -> Circle:
         if not self.noise_params:
@@ -113,13 +88,15 @@ class TwoPortNetwork:
         
         F_min = 10**(self.noise_params['Fmin_dB'] / 10)
         F_target = 10**(F_target_db / 10)
-        rn = self.noise_params['Rn'] / self.z0
+        rn = self.noise_params['Rn']/self.z0
+
+
         g_opt = self.noise_params['gamma_opt']
         
         N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
         
         c = g_opt / (N + 1)
-        r = np.sqrt(N**2 + N * (1 - np.abs(g_opt)**2)) / (N + 1)
+        r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
         
         return Circle(c, r, f"NF={F_target_db}dB")
 
@@ -132,3 +109,30 @@ class TwoPortNetwork:
         term3 = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
         
         return 10 * np.log10(term1 * term2 * term3)
+    
+    @property
+    def Gamma_Ms(self):
+        # Calculate stability factor K first to see if a match is even possible
+        # K = (1 - |S11|^2 - |S22|^2 + |delta|^2) / (2 * |S12 * S21|)
+        
+        B1 = 1 + np.abs(self.S11)**2 - np.abs(self.S22)**2 - np.abs(self.delta)**2
+        C1 = self.S11 - self.delta * np.conj(self.S22)
+        
+        # Cast the radicand to complex to avoid NaN if K < 1
+        radicand = np.array(B1**2 - 4 * np.abs(C1)**2, dtype=complex)
+        
+        # Try the minus sign (usually the one for |Gamma| < 1)
+        g_ms = (B1 - np.sqrt(radicand)) / (2 * C1)
+        
+        # If the result is outside the Smith Chart, use the plus sign
+        if np.abs(g_ms) > 1:
+            g_ms = (B1 + np.sqrt(radicand)) / (2 * C1)
+            
+        return g_ms
+    
+    @property
+    def Gamma_ML(self):
+        B2 = 1 + np.abs(self.S22)**2 - np.abs(self.S11)**2 - np.abs(self.delta)**2
+        C2 = self.S22 - self.delta*np.conjugate(self.S11)
+        return (B2 - np.sqrt(B2**2 - 4*np.abs(C2)**2))/(2*C2)
+
