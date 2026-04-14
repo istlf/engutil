@@ -268,11 +268,21 @@ engutil.write_ltspice_params(params, "simulations/vent_params.txt")
             f.write(f".param {name}={value}\n")
 
 
-def mag2db(x):
-    return 20*np.log10(np.abs(x))
+def mag2db(mag):
+    """Convert amplitude/voltage/current magnitude to dB (20*log10)."""
+    return 20 * np.log10(np.abs(mag))
 
-def db2mag(x):
-    return 10^(x/20)
+def db2mag(db):
+    """Convert dB to amplitude/voltage/current magnitude (10^(db/20))."""
+    return 10**(np.array(db) / 20.0)
+
+def pow2db(pwr):
+    """Convert power magnitude to dB (10*log10)."""
+    return 10 * np.log10(np.abs(pwr))
+
+def db2pow(db):
+    """Convert dB to power magnitude (10^(db/10))."""
+    return 10**(np.array(db) / 10.0)
 
 def to_cartesian(polar_tuple):
     """

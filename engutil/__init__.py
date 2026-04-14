@@ -41,6 +41,8 @@ from .util import (
     percent,
     mag2db,
     db2mag,
+    mag2db_pwr,
+    db2mag_pwr,
     pol2cart,
     cart2pol,
     load_ads_csv,

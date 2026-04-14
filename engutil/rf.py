@@ -45,6 +45,7 @@ class TwoPortNetwork:
     # --- Gain Properties ---
     @property
     def max_stable_gain_db(self):
+
         return 10 * np.log10(np.abs(self.S21) / np.abs(self.S12))
 
     # --- Stability Circles ---
@@ -136,3 +137,21 @@ class TwoPortNetwork:
         C2 = self.S22 - self.delta*np.conjugate(self.S11)
         return (B2 - np.sqrt(B2**2 - 4*np.abs(C2)**2))/(2*C2)
 
+
+    @property
+    def U(self):
+        # Unilateral figure of merit
+        # Equation 12.46 in Pozar 
+        num = np.abs(self.S12)*np.abs(self.S21)*np.abs(self.S11)*np.abs(self.S22)
+        den = (1 - np.abs(self.S11)**2)*(1 - np.abs(self.S22)**2)
+
+        return num/den 
+
+    @property 
+    def G_TUmax(self):
+        # 12.42 in Pozar 
+        term1 = 1/(1 - np.abs(self.S11)**2)
+        term2 = np.abs(self.S21)**2
+        term3 = 1/(1 - np.abs(self.S22)**2)
+        return term1*term2*term3
+    
