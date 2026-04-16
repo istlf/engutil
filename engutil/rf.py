@@ -142,7 +142,38 @@ class TwoPortNetwork:
         den = (1 - np.abs(self.S11)**2)*(1 - np.abs(self.S22)**2)
 
         return num/den 
-
+    
+    @property
+    def unilateral_error_limits(self):
+        """
+        Calculates the bounds on the ratio GT / GTU due to the unilateral assumption.
+        Returns a dict with linear bounds and dB bounds.
+        """
+        u = self.U
+        
+        # Calculate linear bounds
+        lower_lin = 1 / (1 + u)**2
+        upper_lin = 1 / (1 - u)**2
+        
+        # Calculate dB bounds (Power ratio, so use 10*log10)
+        # Re-using the logic from our previous conversation
+        lower_db = 10 * np.log10(lower_lin)
+        upper_db = 10 * np.log10(upper_lin)
+        
+        return {
+            'lower_lin': lower_lin,
+            'upper_lin': upper_lin,
+            'lower_db': lower_db,
+            'upper_db': upper_db,
+            'range_db': (lower_db, upper_db)
+        }
+    @property
+    def print_unilateral_report(self):
+        """A helper to print the figure of merit analysis."""
+        stats = self.unilateral_error_limits
+        print(f"Unilateral Figure of Merit (U): {self.U:.4f}")
+        print(f"Max Error Bounds: {stats['lower_db']:.2f} dB < GT/GTU < {stats['upper_db']:.2f} dB")
+        
     # --- Gain Properties ---
     @property
     def max_stable_gain_db(self):
@@ -170,7 +201,7 @@ class TwoPortNetwork:
     def G_Tmax(self):
         # 12.43 in Pozar, assumes K > 1 ie. unconditionally stable
         term1 = np.abs(self.S21)/np.abs(self.S12)
-        term2 = (self.K - np.sqrt(self.K**2 - 1))
+        term2 = (self.K - np.sqrt(self.K**2 - 1))   
     
         return term1*term2
 
