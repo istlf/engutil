@@ -179,7 +179,7 @@ class TwoPortNetwork:
         return np.abs(self.S21)/np.abs(self.S12)
 
     # --- Constant Gain Circles (Available Gain) ---
-    @property
+
     def available_gain_circle(self, gain_db: float) -> Circle:
         """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
         Ga =  10**(gain_db / 10)
@@ -198,7 +198,7 @@ class TwoPortNetwork:
         return Circle(ca, ra, f"Ga={gain_db}dB")
 
     # --- Noise Figure Circles ---
-    @property
+
     def noise_circle(self, F_target_db: float) -> Circle:
         if not self.noise_params:
             raise ValueError("Noise parameters (Fmin_dB, Rn, gamma_opt) not provided.")
