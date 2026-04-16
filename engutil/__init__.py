@@ -26,6 +26,12 @@ from .acoustics import (
 )
 from .rf import (
     TwoPortNetwork,
+    to_cartesian,
+    to_polar,
+    calc_transducer_gain,
+    noise_figure_circle,
+    available_gain_circle,
+    reflection_2_impedance
 )
 from .util import (
     load_complex_csv,
@@ -48,11 +54,20 @@ from .util import (
     load_ads_csv,
     generate_noise_figure_latex_table,
     generate_available_gain_latex_table,
+    to_db_pwr,
+    generate_circle_locus,
+    to_linear,
+    save_points_as_dat,
     to_cartesian,
     to_polar,
     to_db_pwr
 )
 
+from .latex import (
+    create_smith_chart_tex,
+    append_point_to_tex,
+    append_circle_to_tex
+)
 
 def reload_self():
 

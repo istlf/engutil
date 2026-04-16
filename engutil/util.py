@@ -369,4 +369,23 @@ def generate_available_gain_latex_table(Ga, Ca, Ra):
     return latex_str
 
 def to_db_pwr(val):
-    return 10*np.log10(val)
+    return 10*np.log10(np.abs(val))
+
+def to_linear(val):
+    return 10**(val/10)
+
+def generate_circle_locus(center, radius, num_points=200):
+        """Generates complex points to draw a circle"""
+        theta = np.linspace(0, 2 * np.pi, num_points)
+        return center + radius * np.exp(1j * theta)
+
+def save_points_as_dat(filename, points):
+    """
+    Takes a list or array of complex numbers and saves them 
+    as two columns (Real and Imaginary) in a .dat file.
+    """
+    data = np.array(points)
+    
+    combined = np.column_stack((data.real, data.imag))
+    
+    np.savetxt(filename, combined, fmt='%.8f', delimiter='\t', comments='')
