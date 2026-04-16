@@ -29,7 +29,9 @@ from .rf import (
     to_cartesian,
     to_polar,
     calc_transducer_gain,
-    reflection_2_impedance
+    reflection_2_impedance,
+    L_LP_to_BP,
+    C_LP_to_BP
 )
 from .util import (
     load_complex_csv,
