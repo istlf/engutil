@@ -135,38 +135,6 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
 def to_linear(val):
     return 10**(val/10)
 
-def noise_figure_circle(gamma_opt, Fmin, RN, Z0, F):
-    """
-    Calculates the constant noise figure circle at noise figure F
-    """
-    N = (to_linear(F) - to_linear(Fmin))/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
-    CF = gamma_opt/(N+1)
-    RF = np.sqrt(N*(N + 1 - np.abs(gamma_opt)**2))/(N+1)
-
-    return CF, RF
-
-def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
-    """
-    Calculates the center (Ca) and radius (ra) of available gain circles 
-    using the provided S-parameters and gain factor.
-    """
-    
-    ga = to_linear(Ga)/(np.abs(S21)**2)
-
-    c1 = S11 - delta * np.conj(S22)
-    
-    denominator = 1 + ga * (np.abs(S11)**2 - np.abs(delta)**2)
-    
-    ca = (ga * np.conj(c1)) / denominator
-    
-    s12_s21_mag = np.abs(S12 * S21)
-    
-    ra_numerator = np.sqrt(1 - 2 * K * s12_s21_mag * ga + (s12_s21_mag * ga)**2)
-    
-    ra = ra_numerator / np.abs(denominator)
-    
-    return ca, ra
-
 def reflection_2_impedance(gamma):
     return (1 + gamma)/(1-gamma)
     
