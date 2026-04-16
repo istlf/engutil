@@ -1,4 +1,9 @@
 import numpy as np
+from dataclasses import dataclass
+from typing import Tuple
+import numpy as np
+import matplotlib.pyplot as plt
+
 def to_cartesian(polar_tuple):
     """
     Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
@@ -14,11 +19,25 @@ def to_polar(complex_val):
     angle_deg = np.rad2deg(np.angle(complex_val))
     return (mag, angle_deg)
 
+@dataclass
+class Circle:
+    center: complex
+    radius: float
+    label: str = ""
+    def points(self):
+        theta = np.linspace(0, 2 * np.pi, 200)
+        return self.center + self.radius * np.exp(1j * theta)
+
 class TwoPortNetwork:
-    def __init__(self, s_matrix, gamma_opt):
+    def __init__(self, s_matrix, noise_params=None, z0=50):
+        """
+        noise_params: dict with keys {'Fmin_dB', 'Rn', 'gamma_opt'}
+        """
         self.s = np.array(s_matrix, dtype=complex)
-        self.gamma_op = gamma_opt
-        
+        self.z0 = z0
+        self.noise_params = noise_params
+    
+    # --- Basic S-Parameter Properties ---
     @property
     def S11(self): return self.s[0, 0]
     @property
@@ -30,90 +49,70 @@ class TwoPortNetwork:
     
     @property
     def delta(self):
-        """Determinant of the S-matrix"""
         return (self.S11 * self.S22) - (self.S12 * self.S21)
         
     @property
     def K(self):
-        """Rollett Stability Factor (K > 1 and |delta| < 1 indicates unconditional stability)"""
         num = 1 - np.abs(self.S11)**2 - np.abs(self.S22)**2 + np.abs(self.delta)**2
         den = 2 * np.abs(self.S12 * self.S21)
         return num / den
 
+    # --- Gain Properties ---
     @property
-    def MSG(self):
-        return 10*np.log10(np.abs(self.S21)/np.abs(self.S12))
-        
+    def max_stable_gain_db(self):
+        return 10 * np.log10(np.abs(self.S21) / np.abs(self.S12))
 
+    # --- Stability Circles ---
     @property
-    def MAG(self):
-        return np.abs(self.S21)/np.abs(self.S12)*(self.K - np.sqrt(self.K**2 - 1))
-
-    @property
-    def Gamma_Ms(self):
-        # Calculate stability factor K first to see if a match is even possible
-        # K = (1 - |S11|^2 - |S22|^2 + |delta|^2) / (2 * |S12 * S21|)
-        
-        B1 = 1 + np.abs(self.S11)**2 - np.abs(self.S22)**2 - np.abs(self.delta)**2
-        C1 = self.S11 - self.delta * np.conj(self.S22)
-        
-        # Cast the radicand to complex to avoid NaN if K < 1
-        radicand = np.array(B1**2 - 4 * np.abs(C1)**2, dtype=complex)
-        
-        # Try the minus sign (usually the one for |Gamma| < 1)
-        g_ms = (B1 - np.sqrt(radicand)) / (2 * C1)
-        
-        # If the result is outside the Smith Chart, use the plus sign
-        if np.abs(g_ms) > 1:
-            g_ms = (B1 + np.sqrt(radicand)) / (2 * C1)
-            
-        return g_ms
-    
-    @property
-    def Gamma_ML(self):
-        B2 = 1 + np.abs(self.S22)**2 - np.abs(self.S11)**2 - np.abs(self.delta)**2
-        C2 = self.S22 - self.delta*np.conjugate(self.S11)
-        return (B2 - np.sqrt(B2**2 - 4*np.abs(C2)**2))/(2*C2)
-    @property
-    def get_source_stability_circle(self):
-        """Calculates Center and Radius for the Source Stability Circle (Gamma_S plane)"""
+    def source_stability_circle(self) -> Circle:
         D = self.delta
-        # Formula for C_S and R_S
-        C_s = np.conj(self.S11 - D * np.conj(self.S22)) / (np.abs(self.S11)**2 - np.abs(D)**2)
-        R_s = np.abs(self.S12 * self.S21) / np.abs(np.abs(self.S11)**2 - np.abs(D)**2)
-        return C_s, R_s
+        den = (np.abs(self.S11)**2 - np.abs(D)**2)
+        c = np.conj(self.S11 - D * np.conj(self.S22)) / den
+        r = np.abs(self.S12 * self.S21) / np.abs(den)
+        return Circle(c, r, "Source Stability")
 
     @property
-    def get_load_stability_circle(self):
-        """Calculates Center and Radius for the Load Stability Circle (Gamma_L plane)"""
+    def load_stability_circle(self) -> Circle:
         D = self.delta
-        # Formula for C_L and R_L
-        C_l = np.conj(self.S22 - D * np.conj(self.S11)) / (np.abs(self.S22)**2 - np.abs(D)**2)
-        R_l = np.abs(self.S12 * self.S21) / np.abs(np.abs(self.S22)**2 - np.abs(D)**2)
-        return C_l, R_l
-    
-    @property
-    def U_figure_of_merit(self):
-        """Calculates the unilateral figure of merit"""
-        return (np.abs(self.S11) * np.abs(self.S12) * np.abs(self.S21) * np.abs(self.S22))/((1 - np.abs(self.S11)**2) * (1 - np.abs(self.S22)**2))
-    
-    @property
-    def Gs_max(self):
-        """Calculates Gs_max"""
-        return 1/(1 - np.abs(self.S11)**2)
-    
-    @property
-    def Gl_max(self):
-        """Calculates GL_max"""
-        return 1/(1 - np.abs(self.S22)**2)
+        den = (np.abs(self.S22)**2 - np.abs(D)**2)
+        c = np.conj(self.S22 - D * np.conj(self.S11)) / den
+        r = np.abs(self.S12 * self.S21) / np.abs(den)
+        return Circle(c, r, "Load Stability")
 
+    # --- Constant Gain Circles (Available Gain) ---
+    def available_gain_circle(self, gain_db: float) -> Circle:
+        """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
+        Ga =  10**(gain_db / 10)
+        ga = Ga / (np.abs(self.S21)**2)
+        
+        c1 = self.S11 - self.delta * np.conj(self.S22)
+        den = 1 + ga * (np.abs(self.S11)**2 - np.abs(self.delta)**2)
+        
+        ca = (ga * np.conj(c1)) / den
+        
+        s12s21 = np.abs(self.S12 * self.S21)
 
+        num_r = np.sqrt(1 - 2 * self.K * s12s21 * ga + (s12s21 * ga)**2)
+        ra = num_r / np.abs(den)
+        
+        return Circle(ca, ra, f"Ga={gain_db}dB")
 
-    @staticmethod
-    def generate_circle_locus(center, radius, num_points=200):
-        """Generates complex points to draw a circle"""
-        theta = np.linspace(0, 2 * np.pi, num_points)
-        return center + radius * np.exp(1j * theta)
+    # --- Noise Figure Circles ---
+    def noise_circle(self, F_target_db: float) -> Circle:
+        if not self.noise_params:
+            raise ValueError("Noise parameters (Fmin_dB, Rn, gamma_opt) not provided.")
+        
+        F_min = 10**(self.noise_params['Fmin_dB'] / 10)
+        F_target = 10**(F_target_db / 10)
+        rn = self.noise_params['Rn'] / self.z0
+        g_opt = self.noise_params['gamma_opt']
+        
+        N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
+        
+        c = g_opt / (N + 1)
+        r = np.sqrt(N**2 + N * (1 - np.abs(g_opt)**2)) / (N + 1)
+        
+        return Circle(c, r, f"NF={F_target_db}dB")
 
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """

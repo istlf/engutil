@@ -55,7 +55,10 @@ from .util import (
     to_db_pwr,
     generate_circle_locus,
     to_linear,
-    save_points_as_dat
+    save_points_as_dat,
+    to_cartesian,
+    to_polar,
+    to_db_pwr
 )
 
 from .latex import (
@@ -95,7 +98,6 @@ __all__ = [
     "TwoPortNetwork",
     "to_cartesian",
     "to_polar",
-    "calc_transducer_gain",
 
     
     "load_complex_csv",
