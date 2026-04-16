@@ -29,8 +29,6 @@ from .rf import (
     to_cartesian,
     to_polar,
     calc_transducer_gain,
-    noise_figure_circle,
-    available_gain_circle,
     reflection_2_impedance
 )
 from .util import (
@@ -52,10 +50,7 @@ from .util import (
     pol2cart,
     cart2pol,
     load_ads_csv,
-    generate_noise_figure_latex_table,
-    generate_available_gain_latex_table,
     to_db_pwr,
-    generate_circle_locus,
     to_linear,
     save_points_as_dat,
     to_cartesian,
@@ -66,7 +61,9 @@ from .util import (
 from .latex import (
     create_smith_chart_tex,
     append_point_to_tex,
-    append_circle_to_tex
+    append_circle_to_tex,
+    generate_noise_figure_latex_table,
+    generate_available_gain_latex_table
 )
 
 def reload_self():
