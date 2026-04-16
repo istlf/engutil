@@ -75,102 +75,6 @@ class TwoPortNetwork:
         c = np.conj(self.S22 - D * np.conj(self.S11)) / den
         r = np.abs(self.S12 * self.S21) / np.abs(den)
         return Circle(c, r, "Load Stability")
-
-    # --- Constant Gain Circles (Available Gain) ---
-    def available_gain_circle(self, gain_db: float) -> Circle:
-        """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
-        Ga =  10**(gain_db / 10)
-        ga = Ga / (np.abs(self.S21)**2)
-        
-        c1 = self.S11 - self.delta * np.conj(self.S22)
-        den = 1 + ga * (np.abs(self.S11)**2 - np.abs(self.delta)**2)
-        
-        ca = (ga * np.conj(c1)) / den
-        
-        s12s21 = np.abs(self.S12 * self.S21)
-
-        num_r = np.sqrt(1 - 2 * self.K * s12s21 * ga + (s12s21 * ga)**2)
-        ra = num_r / np.abs(den)
-        
-        return Circle(ca, ra, f"Ga={gain_db}dB")
-
-    # --- Noise Figure Circles ---
-    def noise_circle(self, F_target_db: float) -> Circle:
-        if not self.noise_params:
-            raise ValueError("Noise parameters (Fmin_dB, Rn, gamma_opt) not provided.")
-        
-        F_min = 10**(self.noise_params['Fmin_dB'] / 10)
-        F_target = 10**(F_target_db / 10)
-        rn = self.noise_params['Rn']/self.z0
-
-
-        g_opt = self.noise_params['gamma_opt']
-        
-        N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
-        
-        c = g_opt / (N + 1)
-        r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
-        
-        return Circle(c, r, f"NF={F_target_db}dB")
-
-def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
-    """
-    Calculates Transducer Power Gain (G_T) based on the standard RF formula.
-    Returns the gain as a linear ratio (not dB).
-    """
-    # 1st term: Source match effect
-    term_source = (1 - np.abs(Gamma_s)**2) / np.abs(1 - Gamma_s * Gamma_in)**2
-    
-    # 2nd term: Forward gain of the transistor
-    term_transistor = np.abs(S21)**2
-    
-    # 3rd term: Load match effect
-    term_load = (1 - np.abs(Gamma_L)**2) / np.abs(1 - S22 * Gamma_L)**2
-    
-    G_T = term_source * term_transistor * term_load
-    
-    return G_T
-
-def to_linear(val):
-    return 10**(val/10)
-
-def noise_figure_circle(gamma_opt, Fmin, RN, Z0, F):
-    """
-    Calculates the constant noise figure circle at noise figure F
-    """
-    N = (to_linear(F) - to_linear(Fmin))/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
-    CF = gamma_opt/(N+1)
-    RF = np.sqrt(N*(N + 1 - np.abs(gamma_opt)**2))/(N+1)
-
-    return CF, RF
-
-def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
-    """
-    Calculates the center (Ca) and radius (ra) of available gain circles 
-    using the provided S-parameters and gain factor.
-    """
-    
-    ga = to_linear(Ga)/(np.abs(S21)**2)
-
-    c1 = S11 - delta * np.conj(S22)
-    
-    denominator = 1 + ga * (np.abs(S11)**2 - np.abs(delta)**2)
-    
-    ca = (ga * np.conj(c1)) / denominator
-    
-    s12_s21_mag = np.abs(S12 * S21)
-    
-    ra_numerator = np.sqrt(1 - 2 * K * s12_s21_mag * ga + (s12_s21_mag * ga)**2)
-    
-    ra = ra_numerator / np.abs(denominator)
-    
-    return ca, ra
-
-def reflection_2_impedance(gamma):
-    return (1 + gamma)/(1-gamma)
-    
-
-    
     @property
     def Gamma_Ms(self):
         # Calculate stability factor K first to see if a match is even possible
@@ -273,3 +177,102 @@ def reflection_2_impedance(gamma):
     def MSG(self):
         # 12.44 in Pozar, maximum stable again - it is G_Tmax with K = 1
         return np.abs(self.S21)/np.abs(self.S12)
+
+    # --- Constant Gain Circles (Available Gain) ---
+    @property
+    def available_gain_circle(self, gain_db: float) -> Circle:
+        """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
+        Ga =  10**(gain_db / 10)
+        ga = Ga / (np.abs(self.S21)**2)
+        
+        c1 = self.S11 - self.delta * np.conj(self.S22)
+        den = 1 + ga * (np.abs(self.S11)**2 - np.abs(self.delta)**2)
+        
+        ca = (ga * np.conj(c1)) / den
+        
+        s12s21 = np.abs(self.S12 * self.S21)
+
+        num_r = np.sqrt(1 - 2 * self.K * s12s21 * ga + (s12s21 * ga)**2)
+        ra = num_r / np.abs(den)
+        
+        return Circle(ca, ra, f"Ga={gain_db}dB")
+
+    # --- Noise Figure Circles ---
+    @property
+    def noise_circle(self, F_target_db: float) -> Circle:
+        if not self.noise_params:
+            raise ValueError("Noise parameters (Fmin_dB, Rn, gamma_opt) not provided.")
+        
+        F_min = 10**(self.noise_params['Fmin_dB'] / 10)
+        F_target = 10**(F_target_db / 10)
+        rn = self.noise_params['Rn']/self.z0
+
+
+        g_opt = self.noise_params['gamma_opt']
+        
+        N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
+        
+        c = g_opt / (N + 1)
+        r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
+        
+        return Circle(c, r, f"NF={F_target_db}dB")
+
+def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
+    """
+    Calculates Transducer Power Gain (G_T) based on the standard RF formula.
+    Returns the gain as a linear ratio (not dB).
+    """
+    # 1st term: Source match effect
+    term_source = (1 - np.abs(Gamma_s)**2) / np.abs(1 - Gamma_s * Gamma_in)**2
+    
+    # 2nd term: Forward gain of the transistor
+    term_transistor = np.abs(S21)**2
+    
+    # 3rd term: Load match effect
+    term_load = (1 - np.abs(Gamma_L)**2) / np.abs(1 - S22 * Gamma_L)**2
+    
+    G_T = term_source * term_transistor * term_load
+    
+    return G_T
+
+def to_linear(val):
+    return 10**(val/10)
+
+def noise_figure_circle(gamma_opt, Fmin, RN, Z0, F):
+    """
+    Calculates the constant noise figure circle at noise figure F
+    """
+    N = (to_linear(F) - to_linear(Fmin))/(4*RN/Z0) * np.abs(1 + gamma_opt)**2
+    CF = gamma_opt/(N+1)
+    RF = np.sqrt(N*(N + 1 - np.abs(gamma_opt)**2))/(N+1)
+
+    return CF, RF
+
+def available_gain_circle(S11, S12, S21, S22, Ga, K, delta):
+    """
+    Calculates the center (Ca) and radius (ra) of available gain circles 
+    using the provided S-parameters and gain factor.
+    """
+    
+    ga = to_linear(Ga)/(np.abs(S21)**2)
+
+    c1 = S11 - delta * np.conj(S22)
+    
+    denominator = 1 + ga * (np.abs(S11)**2 - np.abs(delta)**2)
+    
+    ca = (ga * np.conj(c1)) / denominator
+    
+    s12_s21_mag = np.abs(S12 * S21)
+    
+    ra_numerator = np.sqrt(1 - 2 * K * s12_s21_mag * ga + (s12_s21_mag * ga)**2)
+    
+    ra = ra_numerator / np.abs(denominator)
+    
+    return ca, ra
+
+def reflection_2_impedance(gamma):
+    return (1 + gamma)/(1-gamma)
+    
+
+    
+   
