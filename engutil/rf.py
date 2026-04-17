@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import engutil
+import math
 
 def to_cartesian(polar_tuple):
     """
@@ -275,4 +278,82 @@ def C_LP_to_BP(omega_0, Delta, C, R0):
     Lp = Delta * R0/(omega_0 * C)
     Cp = C/(omega_0 * Delta * R0)
     return Lp, Cp
+
+
+def parse_ads_data(file_path):
+    """
+    Parses an ADS exported .txt file and returns frequency and magnitude vectors.
+    """
+    try:
+        # sep='\s+' handles one or more spaces/tabs as a delimiter
+        # skiprows=1 skips the header 'freq dB(S(4,3))'
+        df = pd.read_csv(file_path, sep=r'\s+', skiprows=1, names=['freq', 'mag'])
+        
+        freq = df['freq'].values
+        magnitude = df['mag'].values
+        
+        return freq, magnitude
+
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return None, None
+
+def get_prefix(val):
+
+    # Define SI prefixes
+    prefixes = {
+        -15: 'f',  # femto
+        -12: 'p',  # pico
+        -9: 'n',   # nano
+        -6: r'\mu ', # micro (latex symbol)
+        -3: 'm',   # milli
+        0: '',     # units
+        3: 'k',    # kilo
+        6: 'M',    # mega
+        9: 'G'     # giga
+    }
+
+    if val == 0:
+            exp_3 = 0
+            scaled_val = 0
+    else:
+        exponent = math.floor(math.log10(abs(val)))
+        exp_3 = int(math.floor(exponent / 3) * 3)
+        scaled_val = val / (10**exp_3)
+
+    # 3. Get prefix symbol
+    prefix_symbol = prefixes.get(exp_3, f"e{exp_3}")
+
+    return prefix_symbol, exp_3
+
+def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5), save=None, target_freqs=None):
     
+    prefix_sym, scale = get_prefix(f[1])    
+    f = f/(10**scale)
+
+    engutil.init_latex()
+    plt.figure(figsize=size)
+    plt.plot(f, resp, label=legend)
+    if target_freqs is not None:
+        for i in range(len(target_freqs)):
+            target_freqs[i] = target_freqs[i]/(10**scale)
+            target_s21 = np.interp(target_freqs[i], f, resp)
+            plt.plot(target_freqs[i], target_s21, 'ro', markersize=8)
+            plt.annotate(f"({target_freqs[i]:.2f}" + prefix_sym + "Hz" + f", {target_s21:.1f} dB)", 
+                    xy=(target_freqs[i], target_s21), 
+                    xytext=(10, 10), 
+                    textcoords='offset points',
+                    color='red',
+                    fontweight='bold')
+    plt.xlabel("Frequency \\textit{f} / " + prefix_sym +"Hz")
+    plt.ylabel("Magnitude $\\left| S21 \\right|$ / dB ")
+    plt.title(title)
+    plt.grid(True, which="both", ls="--", alpha=0.7)
+    plt.legend()
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+    if save is not None:
+        plt.savefig(save, bbox_inches="tight")
+    plt.show()

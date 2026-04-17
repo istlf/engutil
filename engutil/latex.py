@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import re
+import math
 
 def create_smith_chart_tex(filename="chart.tex"):
     # Using a raw string (r"") to handle LaTeX backslashes correctly
@@ -157,3 +159,98 @@ def generate_available_gain_latex_table(Ga, Ca, Ra):
     
     return latex_str
 
+
+def generate_filter_component_latex_table(data_string, precision=4):
+    """
+    Parses component values and converts them to SI prefixed values (e.g., 1.5 nH).
+    """
+    # Define SI prefixes
+    prefixes = {
+        -15: 'f',  # femto
+        -12: 'p',  # pico
+        -9: 'n',   # nano
+        -6: r'\mu ', # micro (latex symbol)
+        -3: 'm',   # milli
+        0: '',     # units
+        3: 'k',    # kilo
+        6: 'M',    # mega
+        9: 'G'     # giga
+    }
+
+    # Define Units based on first letter
+    unit_map = {
+        'L': 'H',
+        'C': 'F',
+        'R': r'$\Omega$',
+        'F': 'Hz'
+    }
+
+    lines = data_string.strip().split('\n')
+    latex_code = [
+        # "\\begin{table}[H]",
+        # "\\centering",
+        "\\begin{tabular}{|l|l|}",
+        "\\hline"
+    ]
+
+    for line in lines:
+        if '=' not in line:
+            continue
+            
+        name, val_str = line.split('=')
+        name = name.strip()
+        val = float(val_str.strip())
+
+        # 1. Identify the base unit
+        first_letter = name[0].upper()
+        base_unit = unit_map.get(first_letter, "")
+
+        # 2. Calculate the engineering exponent (multiples of 3)
+        if val == 0:
+            exp_3 = 0
+            scaled_val = 0
+        else:
+            exponent = math.floor(math.log10(abs(val)))
+            exp_3 = int(math.floor(exponent / 3) * 3)
+            scaled_val = val / (10**exp_3)
+
+        # 3. Get prefix symbol
+        prefix_symbol = prefixes.get(exp_3, f"e{exp_3}")
+        
+        # 4. Format the row
+        # Example: L1 & 1.567 nH \\ \hline
+        formatted_row = f"{name} & {scaled_val:.{precision}f} {prefix_symbol}{base_unit} \\\\ \\hline"
+        latex_code.append(formatted_row)
+
+    latex_code.append("\\end{tabular}")
+    # latex_code.append(f"\\caption{{{table_caption}}}")
+    # latex_code.append("\\end{table}")
+
+    return "\n".join(latex_code)
+
+def append_string_to_tex(filename, content):
+    """
+    Checks if a .tex file exists, creates it if not, 
+    and appends the provided string.
+    """
+    # 1. Ensure the filename ends with .tex
+    if not filename.endswith('.tex'):
+        filename += '.tex'
+
+    # 2. Check if file exists to print a helpful message
+    file_exists = os.path.exists(filename)
+    
+    try:
+        # 3. Open in "append" mode ('a')
+        # This creates the file if it doesn't exist
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(content)
+            f.write("\n") # Ensure the file ends with a newline
+            
+        if file_exists:
+            print(f"Successfully appended content to {filename}")
+        else:
+            print(f"Created {filename} and wrote content.")
+            
+    except Exception as e:
+        print(f"An error occurred: {e}")
