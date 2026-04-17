@@ -264,15 +264,15 @@ def to_linear(val):
 def reflection_2_impedance(gamma):
     return (1 + gamma)/(1-gamma)
     
-def L_LP_to_BP(omega_0, Delta, L):
+def L_LP_to_BP(omega_0, Delta, L, R0):
     """Transforms a LP prototype inductor into series L and C BP components"""
-    Ls = L/(omega_0 * Delta)
-    Cs = Delta/(omega_0 * L)
+    Ls = L*R0/(omega_0 * Delta)
+    Cs = Delta/(omega_0 * L * R0)
     return Ls, Cs
 
-def C_LP_to_BP(omega_0, Delta, C):
+def C_LP_to_BP(omega_0, Delta, C, R0):
     """Transforms a LP prototype capacitor into parallel L and C BP components"""
-    Lp = Delta/(omega_0 * C)
-    Cp = C/(omega_0 * Delta)
+    Lp = Delta * R0/(omega_0 * C)
+    Cp = C/(omega_0 * Delta * R0)
     return Lp, Cp
     
