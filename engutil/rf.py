@@ -225,6 +225,33 @@ class TwoPortNetwork:
         r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
         
         return Circle(c, r, f"NF={F_target_db}dB")
+    
+    def vswr_circle(self, center_gamma: complex, vswr: float) -> Circle:
+        """
+        Generates a circle of constant mismatch (VSWR) around a target reflection point.
+        Useful for 'mismatching on purpose' for stability.
+        """
+        rho = (vswr - 1) / (vswr + 1)
+        # For a circle around a non-zero point in the Gamma plane:
+        num_c = center_gamma * (1 - rho**2)
+        den_c = 1 - (np.abs(center_gamma)**2 * rho**2)
+        
+        c = num_c / den_c
+        r = (rho * (1 - np.abs(center_gamma)**2)) / den_c
+        
+        return Circle(c, r, f"VSWR={vswr} around {to_polar(center_gamma)}")
+
+    def input_vswr_50ohm(self, gamma_s, gamma_l):
+        """
+        Calculates the VSWR seen at the 50 Ohm input port.
+        This assumes your input matching network transforms 50 Ohms -> gamma_s.
+        """
+        g_in = self.gamma_in(gamma_l)
+        # This calculates the mismatch between what the matching network 
+        # expects (gamma_s) and what the transistor actually provides (g_in)
+        # Then it transforms that back to the 50 Ohm reference.
+        gamma_ref = np.abs((g_in - np.conj(gamma_s)) / (1 - g_in * gamma_s))
+        return (1 + gamma_ref) / (1 - gamma_ref)
 
     def gamma_in(self, gamma_l):
         return self.S11 + (self.S12 * self.S21 * gamma_l) / (1 - self.S22 * gamma_l)
