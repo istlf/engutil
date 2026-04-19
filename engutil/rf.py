@@ -1,23 +1,9 @@
 import numpy as np
+import engutil
 from dataclasses import dataclass
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
-
-def to_cartesian(polar_tuple):
-    """
-    Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
-    """
-    mag, angle_deg = polar_tuple
-    return mag * np.exp(1j * np.deg2rad(angle_deg))
-
-def to_polar(complex_val):
-    """
-    Converts a complex number (a + jb) into a (magnitude, angle_in_degrees) tuple.
-    """
-    mag = np.abs(complex_val)
-    angle_deg = np.rad2deg(np.angle(complex_val))
-    return (mag, angle_deg)
 
 @dataclass
 class Circle:
@@ -56,8 +42,26 @@ class TwoPortNetwork:
         num = 1 - np.abs(self.S11)**2 - np.abs(self.S22)**2 + np.abs(self.delta)**2
         den = 2 * np.abs(self.S12 * self.S21)
         return num / den
+    
+    @property
+    def is_unconditionally_stable(self):
+        # returns true if K > 1 and delta < 1 
+        return (self.K > 1) and (np.abs(self.delta) < 1)
+    def get_z_in(self, gamma_l):
+        gin = self.gamma_in(gamma_l)
+        return self.z0 * (1 + gin) / (1 - gin)
 
-   
+    def get_z_out(self, gamma_s):
+        gout = self.gamma_out(gamma_s)
+        return self.z0 * (1 + gout) / (1 - gout)
+    
+    def get_z_in(self, gamma_l):
+        gin = self.gamma_in(gamma_l)
+        return self.z0 * (1 + gin) / (1 - gin)
+
+    def get_z_out(self, gamma_s):
+        gout = self.gamma_out(gamma_s)
+        return self.z0 * (1 + gout) / (1 - gout)
 
     # --- Stability Circles ---
     @property
@@ -98,8 +102,13 @@ class TwoPortNetwork:
     @property
     def Gamma_ML(self):
         B2 = 1 + np.abs(self.S22)**2 - np.abs(self.S11)**2 - np.abs(self.delta)**2
-        C2 = self.S22 - self.delta*np.conjugate(self.S11)
-        return (B2 - np.sqrt(B2**2 - 4*np.abs(C2)**2))/(2*C2)
+        C2 = self.S22 - self.delta * np.conj(self.S11)
+        radicand = np.array(B2**2 - 4 * np.abs(C2)**2, dtype=complex)
+        
+        g_ml = (B2 - np.sqrt(radicand)) / (2 * C2)
+        if np.abs(g_ml) > 1:
+            g_ml = (B2 + np.sqrt(radicand)) / (2 * C2)
+        return g_ml
 
 
     @property
@@ -217,6 +226,51 @@ class TwoPortNetwork:
         
         return Circle(c, r, f"NF={F_target_db}dB")
 
+    def gamma_in(self, gamma_l):
+        return self.S11 + (self.S12 * self.S21 * gamma_l) / (1 - self.S22 * gamma_l)
+
+    def gamma_out(self, gamma_s):
+        return self.S22 + (self.S12 * self.S21 * gamma_s) / (1 - self.S11 * gamma_s)
+
+    def G_T(self, gamma_s, gamma_l, db=False): 
+        # Gonzales 3.2.1 
+        g_in = self.gamma_in(gamma_l)
+        
+        term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
+        term_0 = np.abs(self.S21)**2
+        term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
+        
+        gain = term_s * term_0 * term_l
+        return engutil.pow2db(gain) if db else gain
+    
+    def G_A(self, gamma_s, db=False):
+        """
+        Calculates Available Power Gain (G_A).
+        This assumes conjugate matching on the output (gl = gout*).
+        Gzonales 3.2.3
+        """
+        g_out = self.gamma_out(gamma_s)
+        term1 = (1 - np.abs(gamma_s)**2) / np.abs(1 - self.S11 * gamma_s)**2
+        term2 = np.abs(self.S21)**2
+        term3 = 1 / (1 - np.abs(g_out)**2)
+        
+        gain = term1 * term2 * term3
+        return engutil.pow2db(gain) if db else gain
+
+    def G_P(self, gamma_l, db=False):
+        """
+        Calculates Operating Power Gain (G_P).
+        This assumes conjugate matching on the input (gs = gin*).
+        Gonzales 3.2.4
+        """
+        g_in = self.gamma_in(gamma_l)
+        term1 = 1 / (1 - np.abs(g_in)**2)
+        term2 = np.abs(self.S21)**2
+        term3 = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
+        
+        gain = term1 * term2 * term3
+        return engutil.pow2db(gain) if db else gain
+
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """
     Calculates Transducer Power Gain (G_T) based on the standard RF formula.
@@ -239,8 +293,26 @@ def to_linear(val):
     return 10**(val/10)
 
 def reflection_2_impedance(gamma):
+    # Remembver to scale by Z0 if it is normalized Sopt you are converting for instance. 
     return (1 + gamma)/(1-gamma)
     
 
-    
    
+def to_cartesian(polar_tuple):
+    """
+    Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
+    """
+    mag, angle_deg = polar_tuple
+    return mag * np.exp(1j * np.deg2rad(angle_deg))
+
+def to_polar(complex_val):
+    """
+    Converts a complex number (a + jb) into a (magnitude, angle_in_degrees) tuple.
+    """
+    mag = np.abs(complex_val)
+    angle_deg = np.rad2deg(np.angle(complex_val))
+    return (mag, angle_deg)
+
+def gamma_to_vswr(gamma):
+    mag = np.abs(gamma)
+    return (1 + mag) / (1 - mag)
