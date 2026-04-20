@@ -487,9 +487,7 @@ def to_polar(complex_val):
 def gamma_to_vswr(gamma):
     mag = np.abs(gamma)
     return (1 + mag) / (1 - mag)
-def reflection_2_impedance(gamma):
-    return (1 + gamma)/(1-gamma)
-    
+
 def L_LP_to_BP(omega_0, Delta, L):
     """Transforms a LP prototype inductor into series L and C BP components"""
     Ls = L/(omega_0 * Delta)
