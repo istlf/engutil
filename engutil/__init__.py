@@ -27,14 +27,12 @@ from .acoustics import (
 )
 from .rf import (
     TwoPortNetwork,
-    to_cartesian,
-    to_polar,
     calc_transducer_gain,
     reflection_2_impedance,
-    impedance_2_reflection,
-    gamma_to_vswr,
     L_LP_to_BP,
-    C_LP_to_BP
+    C_LP_to_BP,
+    parse_ads_data,
+    plot_mag
 )
 from .util import (
     load_complex_csv,
@@ -68,7 +66,9 @@ from .latex import (
     append_point_to_tex,
     append_circle_to_tex,
     generate_noise_figure_latex_table,
-    generate_available_gain_latex_table
+    generate_available_gain_latex_table,
+    generate_filter_component_latex_table,
+    append_string_to_tex
 )
 
 def reload_self():
