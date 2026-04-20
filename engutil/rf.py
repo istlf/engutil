@@ -32,7 +32,12 @@ class TwoPortNetwork:
     def S21(self): return self.s[1, 0]
     @property
     def S22(self): return self.s[1, 1]
-    
+    @property
+    def Sopt(self): return self.noise_params["gamma_opt"]
+    @property
+    def Fmin_dB(self): return self.noise_params["Fmin_dB"]
+    @property
+    def Rn(self): return self.noise_params["Rn"]
     @property
     def delta(self):
         return (self.S11 * self.S22) - (self.S12 * self.S21)
