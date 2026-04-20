@@ -130,10 +130,9 @@ class TwoPortNetwork:
         
         # Calculate linear bounds
         lower_lin = 1 / (1 + u)**2
-        upper_lin = 1 / (1 - u)**2
+        upper_lin = 1 / (1 -  u)**2
         
         # Calculate dB bounds (Power ratio, so use 10*log10)
-        # Re-using the logic from our previous conversation
         lower_db = 10 * np.log10(lower_lin)
         upper_db = 10 * np.log10(upper_lin)
         
@@ -156,23 +155,24 @@ class TwoPortNetwork:
     def max_stable_gain_db(self):
         return 10 * np.log10(np.abs(self.S21) / np.abs(self.S12))
     
-    @property 
-    def G_Smax(self):
-        return 1/(1 - np.abs(self.S11)**2)
+    def G_Smax(self, db=False):
+        gain = 1/(1 - np.abs(self.S11)**2)
 
-    @property 
-    def G_Lmax(self):
-        return 1/(1 - np.abs(self.S22)**2)
+        return engutil.pow2db(gain) if db else gain 
+
+    def G_Lmax(self, db=False):
+        gain =  1/(1 - np.abs(self.S22)**2)
+        return engutil.pow2db(gain) if db else gain 
     
-    @property
-    def G0(self):
-        return np.abs(self.S21)**2
+    def G0(self, db=False):
+        gain = np.abs(self.S21)**2
+        return engutil.pow2db(gain) if db else gain 
     
-    @property 
-    def G_TUmax(self):
+    def G_TUmax(self, db=False):
         # 12.42 in Pozar 
         # assumes conjugate matchin
-        return self.G_Smax*self.G0*self.G_Lmax
+        gain = self.G_Smax()*self.G0()*self.G_Lmax()
+        return engutil.pow2db(gain) if db else gain
 
     @property
     def G_Tmax(self):
@@ -186,6 +186,31 @@ class TwoPortNetwork:
     def MSG(self):
         # 12.44 in Pozar, maximum stable again - it is G_Tmax with K = 1
         return np.abs(self.S21)/np.abs(self.S12)
+
+    def MAG(self, db=True):
+        """
+        Calculates Maximum Available Gain (MAG). 
+        Only defined if K > 1 and |delta| < 1.
+        """
+        if self.is_unconditionally_stable:
+            # 12.43 in Pozar
+            term1 = np.abs(self.S21) / np.abs(self.S12)
+            term2 = self.K - np.sqrt(self.K**2 - 1)
+            return engutil.pow2db(term1 * term2) if db else term1 * term2
+        else:
+            return None # Or raise an error
+
+    @property
+    def max_gain_limit(self):
+        """
+        A 'smart' property that returns MAG if stable, or MSG if unstable.
+        This is what you would see on a datasheet 'Maximum Gain' plot.
+        """
+        if self.is_unconditionally_stable:
+            return self.MAG
+        else:
+            return self.MSG
+        
 
     # --- Constant Gain Circles (Available Gain) ---
 
@@ -226,6 +251,42 @@ class TwoPortNetwork:
         
         return Circle(c, r, f"NF={F_target_db}dB")
     
+
+
+
+    def unilateral_source_gain_circle(self, gain_db: float) -> Circle:
+        """Calculates the Constant Gain Circle (Gs) for the source plane (Unilateral)."""
+        Gs_lin = 10**(gain_db / 10)
+        Gs_max = 1 / (1 - np.abs(self.S11)**2)
+        
+        # Normalized gain (g_s in Pozar/your image)
+        gs = Gs_lin / Gs_max
+        
+        # Pozar 12.51a and 12.51b
+        den = 1 - (1 - gs) * np.abs(self.S11)**2
+        c = (gs * np.conj(self.S11)) / den
+        r = (np.sqrt(1 - gs) * (1 - np.abs(self.S11)**2)) / den
+        
+        return Circle(c, r, f"Gs={gain_db}dB")
+
+    def unilateral_load_gain_circle(self, gain_db: float) -> Circle:
+        """Calculates the Constant Gain Circle (Gl) for the load plane (Unilateral)."""
+        Gl_lin = 10**(gain_db / 10)
+        Gl_max = 1 / (1 - np.abs(self.S22)**2)
+        
+        # Normalized gain (g_l in Pozar/your image)
+        gl = Gl_lin / Gl_max
+        
+        # Pozar 12.52a and 12.52b
+        den = 1 - (1 - gl) * np.abs(self.S22)**2
+        c = (gl * np.conj(self.S22)) / den
+        r = (np.sqrt(1 - gl) * (1 - np.abs(self.S22)**2)) / den
+        
+        return Circle(c, r, f"Gl={gain_db}dB")
+
+
+
+
     def vswr_circle(self, center_gamma: complex, vswr: float) -> Circle:
         """
         Generates a circle of constant mismatch (VSWR) around a target reflection point.
@@ -319,12 +380,73 @@ def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
 def to_linear(val):
     return 10**(val/10)
 
-def reflection_2_impedance(gamma):
-    # Remembver to scale by Z0 if it is normalized Sopt you are converting for instance. 
-    return (1 + gamma)/(1-gamma)
-    
+import numpy as np
 
-   
+def reflection_2_impedance(gamma, z0=50):
+    """
+    Convert a complex reflection coefficient (Gamma) to impedance.
+
+    Parameters
+    ----------
+    gamma : complex or array_like
+        The complex reflection coefficient.
+    z0 : float or complex, optional
+        The characteristic impedance of the system. 
+        Set to 1.0 to return normalized impedance (z). 
+        Defaults to 50.
+
+    Returns
+    -------
+    z : complex or ndarray
+        The complex impedance (Z). Returns np.inf if gamma is 1.0.
+
+    Examples
+    --------
+    >>> reflection_2_impedance(0)
+    (50+0j)
+    >>> reflection_2_impedance(0.33333333, z0=50) # Gamma for 100 Ohm
+    (99.99999925+0j)
+    """
+    gamma = np.asanyarray(gamma, dtype=complex)
+    
+    # Use numpy.errstate to handle division by zero gracefully (at gamma=1)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        z = z0 * (1 + gamma) / (1 - gamma)
+    
+    # If input was a scalar, return a scalar for better usability
+    return z.item() if z.ndim == 0 else z
+
+def impedance_2_reflection(z, z0=50):
+    """
+    Convert a complex impedance (Z) to a reflection coefficient (Gamma).
+
+    Parameters
+    ----------
+    z : complex or array_like
+        The complex impedance.
+    z0 : float or complex, optional
+        The characteristic impedance of the system.
+        If z is already normalized, set z0=1.0.
+        Defaults to 50.
+
+    Returns
+    -------
+    gamma : complex or ndarray
+        The complex reflection coefficient.
+
+    Examples
+    --------
+    >>> impedance_2_reflection(50, z0=50)
+    0j
+    >>> impedance_2_reflection(0, z0=50) # Short circuit
+    (-1+0j)
+    """
+    z = np.asanyarray(z, dtype=complex)
+    
+    with np.errstate(divide='ignore', invalid='ignore'):
+        gamma = (z - z0) / (z + z0)
+        
+    return gamma.item() if gamma.ndim == 0 else gamma
 def to_cartesian(polar_tuple):
     """
     Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).

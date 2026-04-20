@@ -8,7 +8,7 @@ from matplotlib.patches import Circle
 from pathlib import Path
 from typing import Sequence, Tuple, Optional
 
-
+CB_COLORS = ["cbBlue", "cbVermillion", "cbGreen", "cbPurple", "cbSky", "cbOrange"]
 def init_latex():
     plt.rcParams.update({
         "text.usetex": True,

@@ -11,6 +11,7 @@ from .signals import (
 
 
 from .plotting import (
+    CB_COLORS,
     init_latex,
     plot_time_series,
     stem_time_series,
@@ -30,6 +31,7 @@ from .rf import (
     to_polar,
     calc_transducer_gain,
     reflection_2_impedance,
+    impedance_2_reflection,
     gamma_to_vswr
 )
 from .util import (

@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "engutil"
 version = "0.1.0"
-description = "Engineering utilities for plotting and signal generation"
+description = "Engineering utilities for plotting, signal generation, RF etc. "
 authors = [
-    { name="Your Name" }
+    { name="istlf" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
