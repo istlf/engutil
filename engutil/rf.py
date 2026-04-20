@@ -79,6 +79,7 @@ class TwoPortNetwork:
         c = np.conj(self.S22 - D * np.conj(self.S11)) / den
         r = np.abs(self.S12 * self.S21) / np.abs(den)
         return Circle(c, r, "Load Stability")
+    
     @property
     def Gamma_Ms(self):
         # Calculate stability factor K first to see if a match is even possible
@@ -358,6 +359,27 @@ class TwoPortNetwork:
         
         gain = term1 * term2 * term3
         return engutil.pow2db(gain) if db else gain
+    # --- Constant GS and GL circles --- 
+
+    def constant_GS_circle(self, gain_db: float) -> Circle:
+        """Calculates the constant GS circle for the unilateral case - see example 12.4 in pozar"""
+        GSmax = self.G_Smax
+        gS = (10**(gain_db/10))/GSmax
+
+        CS = (gS * np.conjugate(self.S11))/(1 - (1 - gS) * np.abs(self.S11)**2)
+        RS = (np.sqrt(1 - gS) * (1 - np.abs(self.S11)**2))/(1 - (1 - gS) * np.abs(self.S11)**2)
+
+        return Circle(CS, RS, f"GS={gain_db}dB")
+    
+    def constant_GL_circle(self, gain_db: float) -> Circle:
+        """Calculates the constant GL circle for the unilateral case - see example 12.4 in pozar"""
+        GLmax = self.G_Lmax
+        gL = (10**(gain_db/10))/GLmax
+
+        CL = (gL * np.conjugate(self.S22))/(1 - (1 - gL) * np.abs(self.S22)**2)
+        RL = (np.sqrt(1 - gL) * (1 - np.abs(self.S22)**2))/(1 - (1 - gL) * np.abs(self.S22)**2)
+
+        return Circle(CL, RL, f"GL={gain_db}dB")
 
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """
@@ -465,3 +487,18 @@ def to_polar(complex_val):
 def gamma_to_vswr(gamma):
     mag = np.abs(gamma)
     return (1 + mag) / (1 - mag)
+def reflection_2_impedance(gamma):
+    return (1 + gamma)/(1-gamma)
+    
+def L_LP_to_BP(omega_0, Delta, L):
+    """Transforms a LP prototype inductor into series L and C BP components"""
+    Ls = L/(omega_0 * Delta)
+    Cs = Delta/(omega_0 * L)
+    return Ls, Cs
+
+def C_LP_to_BP(omega_0, Delta, C):
+    """Transforms a LP prototype capacitor into parallel L and C BP components"""
+    Lp = Delta/(omega_0 * C)
+    Cp = C/(omega_0 * Delta)
+    return Lp, Cp
+    

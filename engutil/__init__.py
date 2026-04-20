@@ -33,6 +33,8 @@ from .rf import (
     reflection_2_impedance,
     impedance_2_reflection,
     gamma_to_vswr
+    L_LP_to_BP,
+    C_LP_to_BP
 )
 from .util import (
     load_complex_csv,
