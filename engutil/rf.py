@@ -38,6 +38,7 @@ class TwoPortNetwork:
     def Fmin_dB(self): return self.noise_params["Fmin_dB"]
     @property
     def Rn(self): return self.noise_params["Rn"]
+    
     @property
     def delta(self):
         return (self.S11 * self.S22) - (self.S12 * self.S21)
