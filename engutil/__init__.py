@@ -31,8 +31,6 @@ from .rf import (
     reflection_2_impedance,
     L_LP_to_BP,
     C_LP_to_BP,
-    parse_ads_data,
-    plot_mag
 )
 from .util import (
     load_complex_csv,
@@ -69,6 +67,13 @@ from .latex import (
     generate_available_gain_latex_table,
     generate_filter_component_latex_table,
     append_string_to_tex
+)
+
+from .rf_plot import (
+    parse_ads_data,
+    plot_mag,
+    get_bandpass_stats,
+    get_filter_bounds
 )
 
 def reload_self():
