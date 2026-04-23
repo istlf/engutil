@@ -327,7 +327,18 @@ class TwoPortNetwork:
     def gamma_out(self, gamma_s):
         return self.S22 + (self.S12 * self.S21 * gamma_s) / (1 - self.S11 * gamma_s)
 
-    def G_T(self, gamma_s, gamma_l, db=False): 
+    # def G_T(self, gamma_s, gamma_l, db=False): 
+    #     # Gonzales 3.2.1 
+    #     g_in = self.gamma_in(gamma_l)
+        
+    #     term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
+    #     term_0 = np.abs(self.S21)**2
+    #     term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
+        
+    #     gain = term_s * term_0 * term_l
+    #     return engutil.pow2db(gain) if db else gain
+
+    def G_T(self, gamma_s, gamma_l, db=False, latex=False):
         # Gonzales 3.2.1 
         g_in = self.gamma_in(gamma_l)
         
@@ -336,8 +347,27 @@ class TwoPortNetwork:
         term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
         
         gain = term_s * term_0 * term_l
+
+        if latex:
+            def cfmt(z):
+                r, phi = engutil.to_polar(z)
+                return rf"{r:.4f}\angle {phi:.2f}^\circ"
+
+            latex_str = rf"""
+    G_T = 
+    \frac{{1 - |{cfmt(gamma_s)}|^2}}{{|1 - ({cfmt(g_in)})({cfmt(gamma_s)})|^2}}
+    \cdot |{cfmt(self.S21)}|^2
+    \cdot \frac{{1 - |{cfmt(gamma_l)}|^2}}{{|1 - ({cfmt(self.S22)})({cfmt(gamma_l)})|^2}}
+    = {gain:.4f}
+    """
+            if db:
+                latex_str += rf" = {engutil.pow2db(gain):.2f}\,\text{{dB}}"
+            
+            print(latex_str)
+            return latex_str
+
         return engutil.pow2db(gain) if db else gain
-    
+
     def G_A(self, gamma_s, db=False):
         """
         Calculates Available Power Gain (G_A).
@@ -506,3 +536,62 @@ def C_LP_to_BP(omega_0, Delta, C):
     Cp = C/(omega_0 * Delta)
     return Lp, Cp
     
+def design_coupled_line_filter(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
+    """
+    Calculates Even and Odd mode impedances for a coupled-line bandpass filter.
+    Based on Pozar's Microwave Engineering (Section 8.8).
+    
+    Parameters:
+    -----------
+    g_factors : np.array
+        The prototype g-values including g0 (source) and g_N+1 (load).
+        For an Nth order filter, len(g_factors) should be N + 2.
+    z0 : float
+        Characteristic impedance (usually 50 Ohms).
+    f0 : float
+        Center frequency in Hz.
+    bw : float
+        Bandwidth in Hz.
+        
+    Returns:
+    --------
+    list of dicts
+        A list where each element is a dictionary containing Z0e and Z0o 
+        for that specific section.
+    """
+    # 1. Basic parameters
+    N = len(g_factors) - 2  # Order of the filter
+    delta = bw / f0         # Fractional bandwidth
+    
+    # 2. Calculate J-inverters (normalized: Z0*Jn)
+    # There are N+1 sections for an Nth order filter
+    jz0 = np.zeros(N + 1)
+    
+    # First section (n=1)
+    jz0[0] = np.sqrt((np.pi * delta) / (2 * g_factors[0] * g_factors[1]))
+    print(f"g0: {g_factors[0]}")
+    # Intermediate sections (n=2 to N)
+    for n in range(1, N):
+        # Indexing logic: g_factors[n] is g_i, g_factors[n+1] is g_i+1
+        jz0[n] = (np.pi * delta) / (2 * np.sqrt(g_factors[n] * g_factors[n+1]))
+    
+    # Last section (n=N+1)
+    jz0[N] = np.sqrt((np.pi * delta) / (2 * g_factors[N] * g_factors[N+1]))
+    
+    # 3. Calculate Even and Odd mode impedances
+    sections = []
+    for i, val in enumerate(jz0):
+        # Equations from Pozar:
+        # Z0e = Z0 * (1 + JZ0 + JZ0^2)
+        # Z0o = Z0 * (1 - JZ0 + JZ0^2)
+        z0e = z0 * (1 + val + val**2)
+        z0o = z0 * (1 - val + val**2)
+        
+        sections.append({
+            "section": i + 1,
+            "z0e": z0e,
+            "z0o": z0o,
+            "jz0": val
+        })
+        
+    return sections

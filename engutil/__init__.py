@@ -34,7 +34,8 @@ from .rf import (
     impedance_2_reflection,
     gamma_to_vswr,
     L_LP_to_BP,
-    C_LP_to_BP
+    C_LP_to_BP,
+    design_coupled_line_filter
 )
 from .util import (
     load_complex_csv,
@@ -119,6 +120,7 @@ __all__ = [
     "db2mag",
     "cart2pol",
     "pol2cart",
-    "load_ads_csv"
+    "load_ads_csv",
+    "design_coupled_line_filter"
 
 ]
