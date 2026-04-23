@@ -220,6 +220,8 @@ class TwoPortNetwork:
         """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
         Ga =  10**(gain_db / 10)
         ga = Ga / (np.abs(self.S21)**2)
+
+        # print(f"Ftarget={gain_db}: ga={ga}")
         
         c1 = self.S11 - self.delta * np.conj(self.S22)
         den = 1 + ga * (np.abs(self.S11)**2 - np.abs(self.delta)**2)
@@ -247,7 +249,7 @@ class TwoPortNetwork:
         g_opt = self.noise_params['gamma_opt']
         
         N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
-        
+        # print(f"Ftarget={F_target_db}: N={N}")
         c = g_opt / (N + 1)
         r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
         
@@ -292,8 +294,9 @@ class TwoPortNetwork:
         Useful for 'mismatching on purpose' for stability.
         """
         rho = (vswr - 1) / (vswr + 1)
+        # print(f"gammaB={rho}")
         # For a circle around a non-zero point in the Gamma plane:
-        num_c = center_gamma * (1 - rho**2)
+        num_c = np.conj(center_gamma) * (1 - rho**2)
         den_c = 1 - (np.abs(center_gamma)**2 * rho**2)
         
         c = num_c / den_c
@@ -324,6 +327,15 @@ class TwoPortNetwork:
         g_in = self.gamma_in(gamma_l)
         
         term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
+        term_0 = np.abs(self.S21)**2
+        term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
+        
+        gain = term_s * term_0 * term_l
+        return engutil.pow2db(gain) if db else gain
+    
+    def G_TU(self, gamma_s, gamma_l, db=False):
+        # Pozar 12.17
+        term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - self.S11 * gamma_s)**2
         term_0 = np.abs(self.S21)**2
         term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
         
