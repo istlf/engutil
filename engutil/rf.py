@@ -286,9 +286,6 @@ class TwoPortNetwork:
         
         return Circle(c, r, f"Gl={gain_db}dB")
 
-
-
-
     def vswr_circle(self, center_gamma: complex, vswr: float) -> Circle:
         """
         Generates a circle of constant mismatch (VSWR) around a target reflection point.
