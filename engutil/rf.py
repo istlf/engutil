@@ -85,39 +85,69 @@ class TwoPortNetwork:
         c = np.conj(self.S22 - D * np.conj(self.S11)) / den
         r = np.abs(self.S12 * self.S21) / np.abs(den)
         return Circle(c, r, "Load Stability")
-    
-    @property
-    def Gamma_Ms(self):
-        # Calculate stability factor K first to see if a match is even possible
-        # K = (1 - |S11|^2 - |S22|^2 + |delta|^2) / (2 * |S12 * S21|)
-        
+
+    def Gamma_Ms(self, latex=False):
+        # Calculate intermediate values
         B1 = 1 + np.abs(self.S11)**2 - np.abs(self.S22)**2 - np.abs(self.delta)**2
         C1 = self.S11 - self.delta * np.conj(self.S22)
         
-        # Cast the radicand to complex to avoid NaN if K < 1
         radicand = np.array(B1**2 - 4 * np.abs(C1)**2, dtype=complex)
         
-        # Try the minus sign (usually the one for |Gamma| < 1)
+        # Determine sign for stability
         g_ms = (B1 - np.sqrt(radicand)) / (2 * C1)
-        
-        # If the result is outside the Smith Chart, use the plus sign
+        sign_used = "-"
         if np.abs(g_ms) > 1:
             g_ms = (B1 + np.sqrt(radicand)) / (2 * C1)
+            sign_used = "+"
             
+        if latex:
+            def cfmt(z):
+                r, phi = engutil.to_polar(z)
+                return rf"{r:.4f}\angle {phi:.2f}^\circ"
+            
+            # intermediate LaTeX steps
+            latex_str = rf"""
+\begin{{aligned}}
+B_1 &= 1 + |S_{{11}}|^2 - |S_{{22}}|^2 - |\Delta|^2 = {B1:.4f} \\
+C_1 &= S_{{11}} - \Delta S_{{22}}^* = {cfmt(C1)} \\
+\Gamma_{{Ms}} &= \frac{{B_1 {sign_used} \sqrt{{B_1^2 - 4|C_1|^2}}}}{{2C_1}} = {cfmt(g_ms)}
+\end{{aligned}}
+"""
+            print(latex_str)
+            return g_ms, latex_str
+
         return g_ms
-    
-    @property
-    def Gamma_ML(self):
+
+    def Gamma_ML(self, latex=False):
+        # Calculate intermediate values
         B2 = 1 + np.abs(self.S22)**2 - np.abs(self.S11)**2 - np.abs(self.delta)**2
         C2 = self.S22 - self.delta * np.conj(self.S11)
+        
         radicand = np.array(B2**2 - 4 * np.abs(C2)**2, dtype=complex)
         
+        # Determine sign for stability
         g_ml = (B2 - np.sqrt(radicand)) / (2 * C2)
+        sign_used = "-"
         if np.abs(g_ml) > 1:
             g_ml = (B2 + np.sqrt(radicand)) / (2 * C2)
+            sign_used = "+"
+
+        if latex:
+            def cfmt(z):
+                r, phi = engutil.to_polar(z)
+                return rf"{r:.4f}\angle {phi:.2f}^\circ"
+            
+            latex_str = rf"""
+\begin{{aligned}}
+B_2 &= 1 + |S_{{22}}|^2 - |S_{{11}}|^2 - |\Delta|^2 = {B2:.4f} \\
+C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
+\Gamma_{{ML}} &= \frac{{B_2 {sign_used} \sqrt{{B_2^2 - 4|C_2|^2}}}}{{2C_2}} = {cfmt(g_ml)}
+\end{{aligned}}
+"""
+            print(latex_str)
+            return g_ml, latex_str
+            
         return g_ml
-
-
     @property
     def U(self):
         # Unilateral figure of merit
@@ -226,7 +256,11 @@ class TwoPortNetwork:
         Ga =  10**(gain_db / 10)
         ga = Ga / (np.abs(self.S21)**2)
         
+
+        
         c1 = self.S11 - self.delta * np.conj(self.S22)
+        #print(f"Ga: {Ga} => ga: {ga}, c1: {engutil.to_polar(c1, latex=True)}")
+        
         den = 1 + ga * (np.abs(self.S11)**2 - np.abs(self.delta)**2)
         
         ca = (ga * np.conj(c1)) / den
@@ -235,7 +269,7 @@ class TwoPortNetwork:
 
         num_r = np.sqrt(1 - 2 * self.K * s12s21 * ga + (s12s21 * ga)**2)
         ra = num_r / np.abs(den)
-        
+        #print(f"CA: {engutil.to_polar(ca, latex=True)} and rs: {engutil.to_polar(ra, latex=True)}")
         return Circle(ca, ra, f"Ga={gain_db}dB")
 
     # --- Noise Figure Circles ---
@@ -247,15 +281,16 @@ class TwoPortNetwork:
         F_min = 10**(self.noise_params['Fmin_dB'] / 10)
         F_target = 10**(F_target_db / 10)
         rn = self.noise_params['Rn']/self.z0
-
+        print(f"F_target_db: {F_target_db} F_target_lin: {F_target} F_min_lin: {F_min} rn: {rn} ")
 
         g_opt = self.noise_params['gamma_opt']
-        
+        print(f"g_opt: {engutil.to_polar(g_opt,latex=True)}")
         N = (F_target - F_min) / (4 * rn) * np.abs(1 + g_opt)**2
-        
+        print(f"N: {engutil.to_polar(N, latex=True)}")
         c = g_opt / (N + 1)
         r = np.sqrt(N*(N + 1 - np.abs(g_opt)**2))/(N+1)
-        
+        print(f"c: {engutil.to_polar(c,latex=True)}, r: {engutil.to_polar(r,latex=True)}")
+
         return Circle(c, r, f"NF={F_target_db}dB")
     
 
@@ -300,13 +335,14 @@ class TwoPortNetwork:
         Useful for 'mismatching on purpose' for stability.
         """
         rho = (vswr - 1) / (vswr + 1)
+        print(f"gamma_b: {rho}")
         # For a circle around a non-zero point in the Gamma plane:
         num_c = center_gamma * (1 - rho**2)
         den_c = 1 - (np.abs(center_gamma)**2 * rho**2)
         
         c = num_c / den_c
         r = (rho * (1 - np.abs(center_gamma)**2)) / den_c
-        
+        print(f"C_VSWR: {engutil.to_polar(c, latex=True)} and r: {r}")
         return Circle(c, r, f"VSWR={vswr} around {to_polar(center_gamma)}")
 
     def input_vswr_50ohm(self, gamma_s, gamma_l):
@@ -341,7 +377,7 @@ class TwoPortNetwork:
     def G_T(self, gamma_s, gamma_l, db=False, latex=False):
         # Gonzales 3.2.1 
         g_in = self.gamma_in(gamma_l)
-        
+        print(f"g_inds: {engutil.to_polar(g_in, latex=True)}")
         term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
         term_0 = np.abs(self.S21)**2
         term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
@@ -512,12 +548,17 @@ def to_cartesian(polar_tuple):
     mag, angle_deg = polar_tuple
     return mag * np.exp(1j * np.deg2rad(angle_deg))
 
-def to_polar(complex_val):
+def to_polar(complex_val, latex=False, precision=3):
     """
-    Converts a complex number (a + jb) into a (magnitude, angle_in_degrees) tuple.
+    Converts a complex number (a + jb) into:
+      - (magnitude, angle_in_degrees) tuple (default), or
+      - LaTeX string \\polar{mag}{angle} if latex=True
     """
     mag = np.abs(complex_val)
     angle_deg = np.rad2deg(np.angle(complex_val))
+
+    if latex:
+        return f"\\polar{{{mag:.{precision}f}}}{{{angle_deg:.{precision}f}}}"
     return (mag, angle_deg)
 
 def gamma_to_vswr(gamma):
@@ -558,6 +599,51 @@ def design_coupled_line_filter(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
     list of dicts
         A list where each element is a dictionary containing Z0e and Z0o 
         for that specific section.
+
+    Example usage:
+
+#Order 5
+g0 = 1
+g1 = 1.7058
+g2 = 1.2296
+g3 = 2.5408
+g4 = 1.2296
+g5 = 1.7058
+g6 = 1
+
+g = np.array([g0, g1, g2, g3, g4, g5, g6])
+
+results = engutil.rf.design_coupled_line_filter(
+    g_factors=g, 
+    z0=50, 
+    f0=1413.5e6, 
+    bw=40e6
+)
+# 1431.5000
+Z0J1 = np.sqrt(np.pi*delta/(2*g[1]))
+Z0J2 = np.pi*delta/(2*np.sqrt(g[1]*g[2]))
+Z0J3 = np.pi*delta/(2*np.sqrt(g[2]*g[3]))
+print(f"Z0J1: {Z0J1}")
+print(f"Z0J2: {Z0J2}")
+print(f"Z0J3: {Z0J3}")
+Z0e1 = Z0*(1 + Z0J1 + Z0J1**2)
+Z0o1 =  Z0*(1 - Z0J1 + Z0J1**2)
+print(f"Z0e1: {Z0e1} and Z0o1: {Z0o1}")
+print(g[1])
+print(f"{'Section':<8} | {'Z0e (Ω)':<10} | {'Z0o (Ω)':<10}")
+print("-" * 35)
+for s in results:
+    print(f"{s['section']:<8} & {s['z0e']:<10.5f} & {s['z0o']:<10.5f} & {s['jz0']:.5f} \\\\")
+
+for s in results:
+    print(f"Ze{s['section']} = {s['z0e']}")
+    print(f"Zo{s['section']} = {s['z0o']}")
+
+print(g[0])
+# 8.131 for coupled 
+# shorted stubs for bandpass
+
+
     """
     # 1. Basic parameters
     N = len(g_factors) - 2  # Order of the filter
@@ -595,3 +681,167 @@ def design_coupled_line_filter(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
         })
         
     return sections
+
+def design_coupled_stub_resonator(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
+    """
+    Eq. 8.131 
+
+    Example usage:
+
+
+#Order 5
+g0 = 1
+g1 = 1.7058
+g2 = 1.2296
+g3 = 2.5408
+g4 = 1.2296
+g5 = 1.7058
+g6 = 1
+
+g = np.array([g1, g2, g3, g4, g5, g6])
+
+results = engutil.rf.design_coupled_stub_resonator(
+    g_factors=g, 
+    z0=50, 
+    f0=1413.5e6, 
+    bw=40e6
+)
+
+for s in results:
+    print(f"{s["section"]:<10} & {s["g"]:<10.5f} & {s["z0"]:<10.5f}\\\\" )
+
+for s in results:
+    print(f"Z0{s["section"]} = {s["z0"]:<10}")
+
+print(np.pi*50*delta/(4*1.7058))
+
+    """
+
+    delta = bw / f0  
+    sections = []
+    Z0n = np.zeros_like(g_factors)
+    for i, gn in enumerate(g_factors):
+        Z0n[i] = np.pi*z0*delta/(4*g_factors[i])
+        sections.append({
+            "section": i+1,
+            "g": gn,
+            "z0": Z0n[i]
+        })
+    return sections
+
+   
+    
+    # sections = []
+    # for i, val in enumerate(jz0):
+    #     # Equations from Pozar:
+    #     # Z0e = Z0 * (1 + JZ0 + JZ0^2)
+    #     # Z0o = Z0 * (1 - JZ0 + JZ0^2)
+    #     z0e = z0 * (1 + val + val**2)
+    #     z0o = z0 * (1 - val + val**2)
+        
+    #     sections.append({
+    #         "section": i + 1,
+    #         "z0e": z0e,
+    #         "z0o": z0o,
+    #         "jz0": val
+    #     })
+        
+    # return sections
+
+
+
+
+def transform_series_element(gk, z0, omega0, delta):
+    """
+    Transforms a prototype series inductor (gk) into a series L-C tank.
+    Pozar Eq 8.74a, 8.74b
+    """
+    L_series = (gk * z0) / (omega0 * delta)
+    C_series = delta / (gk * z0 * omega0)
+    return L_series, C_series
+
+def transform_shunt_element(gk, z0, omega0, delta):
+    """
+    Transforms a prototype shunt capacitor (gk) into a parallel L-C tank.
+    Pozar Eq 8.74c, 8.74d
+    """
+    L_parallel = (delta * z0) / (gk * omega0)
+    C_parallel = gk / (delta * z0 * omega0)
+    return L_parallel, C_parallel
+
+# def design_lumped_bandpass(g_factors, z0=50, f0=1413.5e6, bw=40e6):
+#     """
+#     Iterates through g-factors and calculates all L and C values.
+#     Assumes g1 is a series element.
+#     """
+#     omega0 = 2 * np.pi * f0
+#     delta = bw / f0
+    
+#     # We ignore g0 and g_last for the LC components (they are R_source/R_load)
+#     elements = g_factors[1:-1]
+#     results = []
+
+#     for i, gk in enumerate(elements):
+#         idx = i + 1
+#         if idx % 2 != 0:
+#             # Odd index: Series L-C
+#             L, C = transform_series_element(gk, z0, omega0, delta)
+#             results.append({"type": "Series", "index": idx, "L": L, "C": C})
+#         else:
+#             # Even index: Parallel L-C
+#             L, C = transform_shunt_element(gk, z0, omega0, delta)
+#             results.append({"type": "Shunt", "index": idx, "L": L, "C": C})
+            
+#     return results
+
+
+import numpy as np
+
+def transform_to_series_lc(gk, z0, omega0, delta):
+    """Lp prototype inductor -> Series L-C tank"""
+    L = (gk * z0) / (omega0 * delta)
+    C = delta / (gk * z0 * omega0)
+    return L, C
+
+def transform_to_shunt_lc(gk, z0, omega0, delta):
+    """Lp prototype capacitor -> Shunt (parallel) L-C tank"""
+    L = (delta * z0) / (gk * omega0)
+    C = gk / (delta * z0 * omega0)
+    return L, C
+
+def design_lumped_bandpass(g_factors, z0=50, f0=1413.5e6, bw=40e6, first_element_type='series'):
+    """
+    first_element_type: 'series' (Series LC first) or 'shunt' (Parallel LC first)
+    """
+    omega0 = 2 * np.pi * f0
+    delta = bw / f0
+    
+    # Internal g-factors (skipping g0 and g_last)
+    elements = g_factors[1:-1]
+    results = []
+
+    for i, gk in enumerate(elements):
+        idx = i + 1
+        
+        # Determine if this specific index should be series or shunt
+        # If series-first: odd indices are series, even are shunt
+        # If shunt-first: odd indices are shunt, even are series
+        if first_element_type.lower() == 'series':
+            is_series = (idx % 2 != 0)
+        else:
+            is_series = (idx % 2 == 0)
+
+        if is_series:
+            L, C = transform_to_series_lc(gk, z0, omega0, delta)
+            results.append({"type": "Series", "index": idx, "L": L, "C": C})
+        else:
+            L, C = transform_to_shunt_lc(gk, z0, omega0, delta)
+            results.append({"type": "Shunt", "index": idx, "L": L, "C": C})
+            
+    return results
+
+def _to_polar_latex(self, z, precision=3):
+        """Helper to convert complex number to LaTeX polar form: r ∠ θ°"""
+        r = np.abs(z)
+        theta = np.angle(z, deg=True)
+        return f"{r:.{precision}f} \\angle {theta:.{precision}f}^\\circ"

@@ -35,7 +35,10 @@ from .rf import (
     gamma_to_vswr,
     L_LP_to_BP,
     C_LP_to_BP,
-    design_coupled_line_filter
+    design_coupled_line_filter,
+    design_lumped_bandpass,
+    transform_shunt_element,
+    transform_series_element
 )
 from .util import (
     load_complex_csv,
@@ -53,6 +56,8 @@ from .util import (
     db2mag,
     db2pow,
     pow2db,
+    watt2dbm,
+    dbm2watt,
     pol2cart,
     cart2pol,
     load_ads_csv,
@@ -62,6 +67,7 @@ from .util import (
     to_cartesian,
     to_polar,
     to_db_pwr
+
 )
 
 from .latex import (
@@ -69,7 +75,8 @@ from .latex import (
     append_point_to_tex,
     append_circle_to_tex,
     generate_noise_figure_latex_table,
-    generate_available_gain_latex_table
+    generate_available_gain_latex_table,
+    to_latex
 )
 
 def reload_self():
@@ -120,7 +127,13 @@ __all__ = [
     "db2mag",
     "cart2pol",
     "pol2cart",
+    "watt2dbm",
+    "dbm2watt",
+    
     "load_ads_csv",
     "design_coupled_line_filter"
-
+    "design_lumped_bandpass",
+    "transform_shunt_element",
+    "transform_series_element",
+    "to_latex"
 ]
