@@ -52,10 +52,16 @@ def _get_prefix(val):
 
 def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5), save=None, target_freqs=None):
     
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.size": 30,
+        "axes.labelsize": 30,
+        "axes.titlesize": 32
+    })
+
     prefix_sym, scale = _get_prefix(f[1])    
     f = f/(10**scale)
 
-    engutil.init_latex()
     plt.figure(figsize=size)
     plt.plot(f, resp, label=legend)
     if target_freqs is not None:
@@ -63,7 +69,7 @@ def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5),
             target_freqs[i] = target_freqs[i]/(10**scale)
             target_s21 = np.interp(target_freqs[i], f, resp)
             plt.plot(target_freqs[i], target_s21, 'ro', markersize=8)
-            plt.annotate(f"({target_freqs[i]:.2f}" + prefix_sym + "Hz" + f", {target_s21:.1f} dB)", 
+            plt.annotate(f"({target_freqs[i]:.4f}" + prefix_sym + "Hz" + f", {target_s21:.1f} dB)", 
                     xy=(target_freqs[i], target_s21), 
                     xytext=(10, 10), 
                     textcoords='offset points',

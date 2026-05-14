@@ -66,7 +66,9 @@ from .latex import (
     generate_noise_figure_latex_table,
     generate_available_gain_latex_table,
     generate_filter_component_latex_table,
-    append_string_to_tex
+    append_string_to_tex,
+    generate_latex_table_coupled_line,
+    generate_tline_latex_table
 )
 
 from .rf_plot import (
