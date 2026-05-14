@@ -344,3 +344,90 @@ def append_string_to_tex(filename, content):
             
     except Exception as e:
         print(f"An error occurred: {e}")
+
+
+def generate_latex_table_coupled_line(JZ0, Z0e, Z0o, width, length, spacing, unit="mm"):
+    """
+    Generates a LaTeX table including electrical and physical parameters.
+    """
+    # Header definition with math mode for subscripts
+    header = [
+        r"n", 
+        r"$J_n Z_0$", 
+        r"$Z_{0e}$", 
+        r"$Z_{0o}$", 
+        f"W ({unit})", 
+        f"L ({unit})", 
+        f"S ({unit})"
+    ]
+    
+    # 7 columns total
+    latex = "\\begin{tabular}{|" + "c|" * len(header) + "}\n"
+    latex += "\\hline\n"
+    
+    # Add Header Row
+    latex += " & ".join(header) + " \\\\\n"
+    latex += "\\hline\n"
+    
+    # Iterate through all arrays simultaneously
+    # Enumerate provides the 'n' index starting at 1
+    zipped_data = zip(JZ0, Z0e, Z0o, width, length, spacing)
+    
+    for i, (jz, ze, zo, w, l, s) in enumerate(zipped_data, start=1):
+        row = [
+            str(i),
+            f"{jz:.4f}",
+            f"{ze:.2f} $\\Omega$",
+            f"{zo:.2f} $\\Omega$",
+            f"{w:.3f}", # Width (3 decimal places)
+            f"{l:.3f}", # Length (3 decimal places)
+            f"{s:.3f}"  # Spacing (3 decimal places)
+        ]
+        latex += " & ".join(row) + " \\\\\n"
+        latex += "\\hline\n"
+    
+    latex += "\\end{tabular}"
+    
+    return latex
+
+
+def generate_tline_latex_table(Z0n, width, length, unit="mm"):
+    """
+    Generates a LaTeX table for transmission line sections.
+    
+    Args:
+        Z0n (list): Characteristic impedance values.
+        width (list): Width values.
+        length (list): Length values.
+        unit (str): Unit for physical dimensions (default "mm").
+    """
+    # Header definition
+    header = [
+        r"n", 
+        r"$Z_{0n} (\Omega)$", 
+        f"W ({unit})", 
+        f"L ({unit})"
+    ]
+    
+    # 4 columns total
+    latex = "\\begin{tabular}{|" + "c|" * len(header) + "}\n"
+    latex += "\\hline\n"
+    
+    # Add Header Row
+    latex += " & ".join(header) + " \\\\\n"
+    latex += "\\hline\n"
+    
+    # Fill rows with data
+    for i, (z, w, l) in enumerate(zip(Z0n, width, length), start=1):
+        row = [
+            str(i),
+            f"{z:.2f}",   # Impedance to 2 decimal places
+            f"{w:.4f}",   # Width to 4 decimal places
+            f"{l:.4f}"    # Length to 4 decimal places
+        ]
+        latex += " & ".join(row) + " \\\\\n"
+        latex += "\\hline\n"
+    
+    latex += "\\end{tabular}"
+    
+    return latex
