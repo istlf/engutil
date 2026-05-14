@@ -331,9 +331,6 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         
         return Circle(c, r, f"Gl={gain_db}dB")
 
-
-
-
     def vswr_circle(self, center_gamma: complex, vswr: float) -> Circle:
         """
         Generates a circle of constant mismatch (VSWR) around a target reflection point.
@@ -342,7 +339,7 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         rho = (vswr - 1) / (vswr + 1)
         print(f"gamma_b: {rho}")
         # For a circle around a non-zero point in the Gamma plane:
-        num_c = center_gamma * (1 - rho**2)
+        num_c = np.conj(center_gamma) * (1 - rho**2)
         den_c = 1 - (np.abs(center_gamma)**2 * rho**2)
         
         c = num_c / den_c
@@ -634,46 +631,46 @@ def design_coupled_line_filter(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
 
     Example usage:
 
-#Order 5
-g0 = 1
-g1 = 1.7058
-g2 = 1.2296
-g3 = 2.5408
-g4 = 1.2296
-g5 = 1.7058
-g6 = 1
+    #Order 5
+    g0 = 1
+    g1 = 1.7058
+    g2 = 1.2296
+    g3 = 2.5408
+    g4 = 1.2296
+    g5 = 1.7058
+    g6 = 1
 
-g = np.array([g0, g1, g2, g3, g4, g5, g6])
+    g = np.array([g0, g1, g2, g3, g4, g5, g6])
 
-results = engutil.rf.design_coupled_line_filter(
-    g_factors=g, 
-    z0=50, 
-    f0=1413.5e6, 
-    bw=40e6
-)
-# 1431.5000
-Z0J1 = np.sqrt(np.pi*delta/(2*g[1]))
-Z0J2 = np.pi*delta/(2*np.sqrt(g[1]*g[2]))
-Z0J3 = np.pi*delta/(2*np.sqrt(g[2]*g[3]))
-print(f"Z0J1: {Z0J1}")
-print(f"Z0J2: {Z0J2}")
-print(f"Z0J3: {Z0J3}")
-Z0e1 = Z0*(1 + Z0J1 + Z0J1**2)
-Z0o1 =  Z0*(1 - Z0J1 + Z0J1**2)
-print(f"Z0e1: {Z0e1} and Z0o1: {Z0o1}")
-print(g[1])
-print(f"{'Section':<8} | {'Z0e (Ω)':<10} | {'Z0o (Ω)':<10}")
-print("-" * 35)
-for s in results:
-    print(f"{s['section']:<8} & {s['z0e']:<10.5f} & {s['z0o']:<10.5f} & {s['jz0']:.5f} \\\\")
+    results = engutil.rf.design_coupled_line_filter(
+        g_factors=g, 
+        z0=50, 
+        f0=1413.5e6, 
+        bw=40e6
+    )
+    # 1431.5000
+    Z0J1 = np.sqrt(np.pi*delta/(2*g[1]))
+    Z0J2 = np.pi*delta/(2*np.sqrt(g[1]*g[2]))
+    Z0J3 = np.pi*delta/(2*np.sqrt(g[2]*g[3]))
+    print(f"Z0J1: {Z0J1}")
+    print(f"Z0J2: {Z0J2}")
+    print(f"Z0J3: {Z0J3}")
+    Z0e1 = Z0*(1 + Z0J1 + Z0J1**2)
+    Z0o1 =  Z0*(1 - Z0J1 + Z0J1**2)
+    print(f"Z0e1: {Z0e1} and Z0o1: {Z0o1}")
+    print(g[1])
+    print(f"{'Section':<8} | {'Z0e (Ω)':<10} | {'Z0o (Ω)':<10}")
+    print("-" * 35)
+    for s in results:
+        print(f"{s['section']:<8} & {s['z0e']:<10.5f} & {s['z0o']:<10.5f} & {s['jz0']:.5f} \\\\")
 
-for s in results:
-    print(f"Ze{s['section']} = {s['z0e']}")
-    print(f"Zo{s['section']} = {s['z0o']}")
+    for s in results:
+        print(f"Ze{s['section']} = {s['z0e']}")
+        print(f"Zo{s['section']} = {s['z0o']}")
 
-print(g[0])
-# 8.131 for coupled 
-# shorted stubs for bandpass
+    print(g[0])
+    # 8.131 for coupled 
+    # shorted stubs for bandpass
 
 
     """
