@@ -431,3 +431,32 @@ def generate_tline_latex_table(Z0n, width, length, unit="mm"):
     latex += "\\end{tabular}"
     
     return latex
+
+def gen_latex_command(name, value, decimals=3):
+        """
+        Creates a \newcommand{\name}{value}.
+        Automatically converts digits in 'name' to words for LaTeX compatibility.
+        Handles complex numbers (polar), floats, and strings.
+        """
+        # Dictionary to convert digits to words for the command name
+        num_map = {
+            '0': 'Zero', '1': 'One', '2': 'Two', '3': 'Three', '4': 'Four',
+            '5': 'Five', '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine'
+        }
+        
+        # Sanitize the name: LaTeX commands cannot contain numbers
+        clean_name = "".join(num_map.get(char, char) for char in name)
+        # Remove any other non-alphabet characters (like underscores)
+        clean_name = "".join(filter(str.isalpha, clean_name))
+
+        # Format the value based on type
+        if isinstance(value, (complex, np.complex128)):
+            mag = np.abs(value)
+            ang = np.angle(value, deg=True)
+            formatted_val = f"{mag:.{decimals}f} \\angle {ang:.1f}^\\circ"
+        elif isinstance(value, (float, np.float64, int)):
+            formatted_val = f"{value:.{decimals}f}"
+        else:
+            formatted_val = str(value)
+
+        return f"\\newcommand{{\\{clean_name}}}{{{formatted_val}}}"

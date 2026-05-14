@@ -435,8 +435,8 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
     
     def to_latex_macros(self, suffix=""):
         """
-        Generates \newcommand lines for LaTeX.
-        Example: \newcommand{\SoneoneSuffix}{0.500 \angle 20^\circ}
+        Generates newcommand lines for LaTeX.
+        Example: newcommand{\SoneoneSuffix}{0.500 angle 20^\circ}
         """
         # Map numbers to words because LaTeX commands cannot have digits
         num_to_word = {"11": "oneone", "12": "onetwo", "21": "twoone", "22": "twotwo"}
