@@ -29,6 +29,7 @@ from .rf import (
     TwoPortNetwork,
     calc_transducer_gain,
     reflection_2_impedance,
+    impedance_2_reflection,
     L_LP_to_BP,
     C_LP_to_BP,
     design_coupled_line_filter,
