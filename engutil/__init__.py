@@ -38,7 +38,8 @@ from .rf import (
     transform_series_element,
     parse_ads_data,
     plot_mag,
-    conversion_gain_corrected
+    conversion_gain_corrected,
+    conductance_matrix
 )
 from .util import (
     load_complex_csv,
@@ -113,6 +114,7 @@ __all__ = [
     "to_cartesian",
     "to_polar",
     "conversion_gain_corrected",
+    "conductance_matrix",
     
     "load_complex_csv",
     "open_csv",

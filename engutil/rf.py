@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import pandas as pd
+import scipy
 
 @dataclass
 class Circle:
@@ -957,3 +958,78 @@ def conversion_gain_corrected(
     )
 
     return G_cnv_corrected
+
+
+def conductance_matrix(
+    V_LO,
+    N,
+    I_0=40e-8,
+    N_f=1.08,
+    V_t=25.84e-3,
+    V_DC=0,
+):
+    """
+    Calculate the conductance matrix for a pumped diode mixer.
+
+    Parameters
+    ----------
+    V_LO : float
+        LO voltage amplitude [V]
+    N : int
+        Highest harmonic order
+    I_0 : float
+        Saturation current [A]
+    N_f : float
+        Ideality factor
+    V_t : float
+        Thermal voltage [V]
+    V_DC : float
+        DC bias voltage [V]
+
+    Returns
+    -------
+    G_matrix : ndarray
+        (N+1)x(N+1) conductance matrix
+    G_coeffs : dict
+        Harmonic conductance coefficients
+    x : float
+        Normalized LO drive
+
+
+    Example
+    -------
+
+G_matrix, G_coeffs, x = engutil.conductance_matrix(
+V_LO=0.32,
+N=2,
+)
+
+print(f"x = {x:.3f}")
+
+for n, val in G_coeffs.items():
+    print(f"G_{n} = {val:.6e} S")
+
+
+    """
+
+    def Gn(x, n):
+        return (
+            I_0
+            / (N_f * V_t)
+            * np.exp(V_DC / (N_f * V_t))
+            * scipy.special.iv(n, x)
+        )
+
+    # Normalized LO drive
+    x = V_LO / (N_f * V_t)
+
+    # Harmonic conductances
+    G_coeffs = {n: Gn(x, n) for n in range(N + 1)}
+
+    # Toeplitz conductance matrix
+    G_matrix = np.array([
+        [G_coeffs[abs(i - j)] for j in range(N + 1)]
+        for i in range(N + 1)
+    ])
+
+    return G_matrix, G_coeffs, x
