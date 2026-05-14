@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
+import math
+import pandas as pd
 
 @dataclass
 class Circle:
@@ -88,6 +90,9 @@ class TwoPortNetwork:
 
     def Gamma_Ms(self, latex=False):
         # Calculate intermediate values
+        # Calculate stability factor K first to see if a match is even possible
+        # K = (1 - |S11|^2 - |S22|^2 + |delta|^2) / (2 * |S12 * S21|)
+        
         B1 = 1 + np.abs(self.S11)**2 - np.abs(self.S22)**2 - np.abs(self.delta)**2
         C1 = self.S11 - self.delta * np.conj(self.S22)
         
@@ -431,27 +436,6 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         
         gain = term1 * term2 * term3
         return engutil.pow2db(gain) if db else gain
-    # --- Constant GS and GL circles --- 
-
-    def constant_GS_circle(self, gain_db: float) -> Circle:
-        """Calculates the constant GS circle for the unilateral case - see example 12.4 in pozar"""
-        GSmax = self.G_Smax
-        gS = (10**(gain_db/10))/GSmax
-
-        CS = (gS * np.conjugate(self.S11))/(1 - (1 - gS) * np.abs(self.S11)**2)
-        RS = (np.sqrt(1 - gS) * (1 - np.abs(self.S11)**2))/(1 - (1 - gS) * np.abs(self.S11)**2)
-
-        return Circle(CS, RS, f"GS={gain_db}dB")
-    
-    def constant_GL_circle(self, gain_db: float) -> Circle:
-        """Calculates the constant GL circle for the unilateral case - see example 12.4 in pozar"""
-        GLmax = self.G_Lmax
-        gL = (10**(gain_db/10))/GLmax
-
-        CL = (gL * np.conjugate(self.S22))/(1 - (1 - gL) * np.abs(self.S22)**2)
-        RL = (np.sqrt(1 - gL) * (1 - np.abs(self.S22)**2))/(1 - (1 - gL) * np.abs(self.S22)**2)
-
-        return Circle(CL, RL, f"GL={gain_db}dB")
 
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """
@@ -564,19 +548,67 @@ def to_polar(complex_val, latex=False, precision=3):
 def gamma_to_vswr(gamma):
     mag = np.abs(gamma)
     return (1 + mag) / (1 - mag)
-
-def L_LP_to_BP(omega_0, Delta, L):
+    
+def L_LP_to_BP(omega_0, Delta, L, R0):
     """Transforms a LP prototype inductor into series L and C BP components"""
-    Ls = L/(omega_0 * Delta)
-    Cs = Delta/(omega_0 * L)
+    Ls = L*R0/(omega_0 * Delta)
+    Cs = Delta/(omega_0 * L * R0)
     return Ls, Cs
 
-def C_LP_to_BP(omega_0, Delta, C):
+def C_LP_to_BP(omega_0, Delta, C, R0):
     """Transforms a LP prototype capacitor into parallel L and C BP components"""
-    Lp = Delta/(omega_0 * C)
-    Cp = C/(omega_0 * Delta)
+    Lp = Delta * R0/(omega_0 * C)
+    Cp = C/(omega_0 * Delta * R0)
     return Lp, Cp
-    
+
+
+def parse_ads_data(file_path):
+    """
+    Parses an ADS exported .txt file and returns frequency and magnitude vectors.
+    """
+    try:
+        # sep='\s+' handles one or more spaces/tabs as a delimiter
+        # skiprows=1 skips the header 'freq dB(S(4,3))'
+        df = pd.read_csv(file_path, sep=r'\s+', skiprows=1, names=['freq', 'mag'])
+        
+        freq = df['freq'].values
+        magnitude = df['mag'].values
+        
+        return freq, magnitude
+
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return None, None
+
+def get_prefix(val):
+
+    # Define SI prefixes
+    prefixes = {
+        -15: 'f',  # femto
+        -12: 'p',  # pico
+        -9: 'n',   # nano
+        -6: r'\mu ', # micro (latex symbol)
+        -3: 'm',   # milli
+        0: '',     # units
+        3: 'k',    # kilo
+        6: 'M',    # mega
+        9: 'G'     # giga
+    }
+
+    if val == 0:
+            exp_3 = 0
+            scaled_val = 0
+    else:
+        exponent = math.floor(math.log10(abs(val)))
+        exp_3 = int(math.floor(exponent / 3) * 3)
+        scaled_val = val / (10**exp_3)
+
+    # 3. Get prefix symbol
+    prefix_symbol = prefixes.get(exp_3, f"e{exp_3}")
+
+    return prefix_symbol, exp_3
+
+
 def design_coupled_line_filter(g_factors, z0=50.0, f0=1413.5e6, bw=40e6):
     """
     Calculates Even and Odd mode impedances for a coupled-line bandpass filter.
@@ -845,3 +877,34 @@ def _to_polar_latex(self, z, precision=3):
         r = np.abs(z)
         theta = np.angle(z, deg=True)
         return f"{r:.{precision}f} \\angle {theta:.{precision}f}^\\circ"
+
+def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5), save=None, target_freqs=None):
+    prefix_sym, scale = get_prefix(f[1])    
+    f = f/(10**scale)
+
+    engutil.init_latex()
+    plt.figure(figsize=size)
+    plt.plot(f, resp, label=legend)
+    if target_freqs is not None:
+        for i in range(len(target_freqs)):
+            target_freqs[i] = target_freqs[i]/(10**scale)
+            target_s21 = np.interp(target_freqs[i], f, resp)
+            plt.plot(target_freqs[i], target_s21, 'ro', markersize=8)
+            plt.annotate(f"({target_freqs[i]:.2f}" + prefix_sym + "Hz" + f", {target_s21:.1f} dB)", 
+                    xy=(target_freqs[i], target_s21), 
+                    xytext=(10, 10), 
+                    textcoords='offset points',
+                    color='red',
+                    fontweight='bold')
+    plt.xlabel("Frequency \\textit{f} / " + prefix_sym +"Hz")
+    plt.ylabel("Magnitude $\\left| S21 \\right|$ / dB ")
+    plt.title(title)
+    plt.grid(True, which="both", ls="--", alpha=0.7)
+    plt.legend()
+    if xlim is not None:
+        plt.xlim(xlim)
+    if ylim is not None:
+        plt.ylim(ylim)
+    if save is not None:
+        plt.savefig(save, bbox_inches="tight")
+    plt.show()
