@@ -37,7 +37,8 @@ from .rf import (
     transform_shunt_element,
     transform_series_element,
     parse_ads_data,
-    plot_mag
+    plot_mag,
+    conversion_gain_corrected
 )
 from .util import (
     load_complex_csv,
@@ -111,7 +112,7 @@ __all__ = [
     "TwoPortNetwork",
     "to_cartesian",
     "to_polar",
-
+    "conversion_gain_corrected",
     
     "load_complex_csv",
     "open_csv",

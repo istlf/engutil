@@ -908,3 +908,55 @@ def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5),
     if save is not None:
         plt.savefig(save, bbox_inches="tight")
     plt.show()
+
+
+
+
+
+def conversion_gain_corrected(
+    G_minus1, # G matrix
+    G0, # g matrix 
+    Y_w1, # IF admittance
+    Y_w1_w0, # RF emb admittance
+    Yin_w1_w0,
+    Z_w1, # IF emb impedance 
+    Z_w1_w0, # RF emb impedance
+    Rs # 13 
+):
+    """_summary_
+
+    Parameters
+    ----------
+    G_minus1 : _type_
+        _description_
+    Z_w1 : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Example usage: 
+        R_s = 13 
+        Y_in = G[0] - G[1]*G[1]/(G[0] + Y_emb_IF)
+        G_cnv_corrected = conversion_gain_corrected(G[1], G[0], Y_emb_IF, Y_emb_RF, Y_in, Z_emb_IF, Z_emb_RF, R_s)
+        G_cnv = complex(G_cnv_corrected).real
+        G_cnv_db = engutil.pow2db(G_cnv)
+
+    """
+    # Eq. 3.73 in nonlin analysis 
+    G_cnv = (
+        abs(G_minus1 / (G0 + Y_w1))**2
+        * abs(1 / (Y_w1_w0 + Yin_w1_w0))**2
+        * 4 * Y_w1_w0.real * Y_w1.real
+    )
+    #print(f"G_cnv_uncorr: {G_cnv:.5f} => {engutil.pow2db(G_cnv):.5f}")
+    # Eq. 3.74
+    G_cnv_corrected = (
+        (Z_w1_w0.real - Rs) / Z_w1_w0.real
+        * G_cnv
+        * (Z_w1.real - Rs) / Z_w1.real
+    )
+
+    return G_cnv_corrected
