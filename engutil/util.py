@@ -284,6 +284,11 @@ def db2pow(db):
     """Convert dB to power magnitude (10^(db/10))."""
     return 10**(np.array(db) / 10.0)
 
+def watt2dbm(watt):
+    return 10*np.log10(1000*watt)
+def dbm2watt(dbm):
+    return 10**(dbm/10)/1000
+
 def to_cartesian(polar_tuple):
     """
     Converts a (magnitude, angle_in_degrees) tuple into a complex number (a + jb).
@@ -291,12 +296,17 @@ def to_cartesian(polar_tuple):
     mag, angle_deg = polar_tuple
     return mag * np.exp(1j * np.deg2rad(angle_deg))
 
-def to_polar(complex_val):
+def to_polar(complex_val, latex=False, precision=3):
     """
-    Converts a complex number (a + jb) into a (magnitude, angle_in_degrees) tuple.
+    Converts a complex number (a + jb) into:
+      - (magnitude, angle_in_degrees) tuple (default), or
+      - LaTeX string \\polar{mag}{angle} if latex=True
     """
     mag = np.abs(complex_val)
     angle_deg = np.rad2deg(np.angle(complex_val))
+
+    if latex:
+        return f"\\polar{{{mag:.{precision}f}}}{{{angle_deg:.{precision}f}}}"
     return (mag, angle_deg)
 
 def to_db_pwr(val):
@@ -315,3 +325,7 @@ def save_points_as_dat(filename, points):
     combined = np.column_stack((data.real, data.imag))
     
     np.savetxt(filename, combined, fmt='%.8f', delimiter='\t', comments='')
+
+
+
+    

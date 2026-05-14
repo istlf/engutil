@@ -234,6 +234,22 @@ def generate_available_gain_latex_table(Ga, Ca, Ra):
     return latex_str
 
 
+
+def to_latex(name, value, fmt=None):
+    """
+    Convert a Python variable to a LaTeX \\newcommand.
+
+    name : str   -> command name (without backslash)
+    value        -> numeric or string
+    fmt  : str   -> optional format spec, e.g. ".3f"
+    """
+    if isinstance(value, float) and fmt is not None:
+        val_str = format(value, fmt)
+    else:
+        val_str = str(value)
+    return f"\\newcommand{{\\{name}}}{{{val_str}}}"
+
+
 def generate_filter_component_latex_table(data_string, precision=4):
     """
     Parses component values and converts them to SI prefixed values (e.g., 1.5 nH).

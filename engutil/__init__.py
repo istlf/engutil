@@ -31,6 +31,10 @@ from .rf import (
     reflection_2_impedance,
     L_LP_to_BP,
     C_LP_to_BP,
+    design_coupled_line_filter,
+    design_lumped_bandpass,
+    transform_shunt_element,
+    transform_series_element,
     parse_ads_data,
     plot_mag
 )
@@ -50,6 +54,8 @@ from .util import (
     db2mag,
     db2pow,
     pow2db,
+    watt2dbm,
+    dbm2watt,
     pol2cart,
     cart2pol,
     load_ads_csv,
@@ -59,6 +65,7 @@ from .util import (
     to_cartesian,
     to_polar,
     to_db_pwr
+
 )
 
 from .latex import (
@@ -67,6 +74,7 @@ from .latex import (
     append_circle_to_tex,
     generate_noise_figure_latex_table,
     generate_available_gain_latex_table,
+    to_latex,
     generate_filter_component_latex_table,
     append_string_to_tex
 )
@@ -119,6 +127,13 @@ __all__ = [
     "db2mag",
     "cart2pol",
     "pol2cart",
-    "load_ads_csv"
-
+    "watt2dbm",
+    "dbm2watt",
+    
+    "load_ads_csv",
+    "design_coupled_line_filter"
+    "design_lumped_bandpass",
+    "transform_shunt_element",
+    "transform_series_element",
+    "to_latex"
 ]
