@@ -333,7 +333,40 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
             return self.MAG
         else:
             return self.MSG
+    
+    # --- Constant Operating Power Gain Circle --- 
+
+    def operating_gain_circle(self, gain_db: float) -> Circle:
+        """
+        Calculates the Gp circle for the Load plane (Gamma_L) - Eqs (3.7.4) and (3.7.5) in Gonzalez.
         
+        LaTeX Formulas:
+        g_p = \frac{G_p}{|S_{21}|^2}
+        C_2 = S_{22} - \Delta S_{11}^*
+        C_p = \frac{g_p C_2^*}{1 + g_p(|S_{22}|^2 - |\Delta|^2)}
+        r_p = \frac{\sqrt{1 - 2K|S_{12}S_{21}|g_p + |S_{12}S_{21}|^2 g_p^2}}{|1 + g_p(|S_{22}|^2 - |\Delta|^2)|}
+        """
+        # 1. Convert gain from dB to linear and normalize
+        Gp = 10**(gain_db / 10)
+        gp = Gp / (np.abs(self.S21)**2)
+        
+        # 2. Calculate C2 (Eq 3.7.3)
+        c2 = self.S22 - self.delta * np.conj(self.S11)
+        
+        # 3. Calculate common denominator for Cp and rp
+        den = 1 + gp * (np.abs(self.S22)**2 - np.abs(self.delta)**2)
+        
+        # 4. Calculate center Cp (Eq 3.7.4)
+        # Note: the formula uses the conjugate of C2
+        cp = (gp * np.conj(c2)) / den
+        
+        # 5. Calculate radius rp (Eq 3.7.5)
+        s12s21 = np.abs(self.S12 * self.S21)
+        # The term inside sqrt is 1 - 2*K*|S12*S21|*gp + (|S12*S21|*gp)^2
+        num_r = np.sqrt(1 - 2 * self.K * s12s21 * gp + (s12s21 * gp)**2)
+        rp = num_r / np.abs(den)
+        
+        return Circle(cp, rp, f"Gp={gain_db}dB")
 
     # --- Constant Gain Circles (Available Gain) ---
 
