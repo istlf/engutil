@@ -36,9 +36,7 @@ from .rf import (
     design_lumped_bandpass,
     transform_shunt_element,
     transform_series_element,
-    parse_ads_data,
-    plot_mag,
-    conversion_gain_corrected,
+    conversion_gain,
     conductance_matrix
 )
 from .util import (
@@ -91,15 +89,6 @@ from .rf_plot import (
     get_filter_bounds
 )
 
-def reload_self():
-
-    """Reload engutil and all its submodules (for Jupyter dev use)."""
-    modules = [m for m in sys.modules if m.startswith("engutil")]
-    for m in modules:
-        importlib.reload(sys.modules[m])
-    import engutil
-    return engutil
-
 __all__ = [
     "generate_sine",
     "generate_square",
@@ -112,7 +101,7 @@ __all__ = [
     "plot_real_phase",
     "plot_bode",
     "read_ltspice_export",
-    "plot_ltspice"
+    "plot_ltspice",
     "make_spectrum",
     "reload_self",
     "plot_zplane",
@@ -122,7 +111,7 @@ __all__ = [
     "TwoPortNetwork",
     "to_cartesian",
     "to_polar",
-    "conversion_gain_corrected",
+    "conversion_gain",
     "conductance_matrix",
     
     "load_complex_csv",
@@ -144,7 +133,7 @@ __all__ = [
     "dbm2watt",
     
     "load_ads_csv",
-    "design_coupled_line_filter"
+    "design_coupled_line_filter",
     "design_lumped_bandpass",
     "transform_shunt_element",
     "transform_series_element",
