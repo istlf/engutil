@@ -526,7 +526,7 @@ G_T =
         return engutil.pow2db(gain) if db else gain
     
     def to_latex_macros(self, suffix=""):
-        """
+        r"""
         Generates newcommand lines for LaTeX.
         Example: newcommand{\SoneoneSuffix}{0.500 angle 20^\circ}
         """
@@ -1083,6 +1083,32 @@ def conversion_gain(
     G_cnv_corrected = conversion_gain_corrected(G[1], G[0], Y_emb_IF, Y_emb_RF, Y_in, Z_emb_IF, Z_emb_RF, R_s)
     G_cnv = complex(G_cnv_corrected).real
     G_cnv_db = engutil.pow2db(G_cnv)
+
+
+    G_{cnv}
+&=
+\left|
+\frac{G_{-1}}{G_0 + Y(\omega_1)}
+\right|^2
+\left|
+\frac{1}{Y(\omega_1+\omega_0) + Y_{in}(\omega_1+\omega_0)}
+\right|^2
+4\Re\{Y(\omega_1+\omega_0)\}\,
+\Re\{Y(\omega_1)\}
+
+    G_{cnv}' &=
+    \frac{
+\Re\{Z(\omega_1+\omega_0)-R_s\}
+}{
+\Re\{Z(\omega_1+\omega_0)\}
+}
+\,G_{cnv}\,
+\frac{
+\Re\{Z(\omega_1)-R_s\}
+}{
+\Re\{Z(\omega_1)\}
+}
+
     """
     
     # Eq. 3.73 in nonlin analysis 
