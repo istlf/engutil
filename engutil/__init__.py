@@ -79,7 +79,8 @@ from .latex import (
     generate_filter_component_latex_table,
     append_string_to_tex,
     generate_latex_table_coupled_line,
-    generate_tline_latex_table
+    generate_tline_latex_table,
+    gen_latex_command
 )
 
 from .rf_plot import (

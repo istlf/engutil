@@ -325,8 +325,6 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         print(f"c: {engutil.to_polar(c,latex=True)}, r: {engutil.to_polar(r,latex=True)}")
 
         return Circle(c, r, f"NF={F_target_db}dB")
-    
-
 
 
     def unilateral_source_gain_circle(self, gain_db: float) -> Circle:
@@ -526,6 +524,37 @@ G_T =
         
         gain = term1 * term2 * term3
         return engutil.pow2db(gain) if db else gain
+    
+    def to_latex_macros(self, suffix=""):
+        """
+        Generates newcommand lines for LaTeX.
+        Example: newcommand{\SoneoneSuffix}{0.500 angle 20^\circ}
+        """
+        # Map numbers to words because LaTeX commands cannot have digits
+        num_to_word = {"11": "oneone", "12": "onetwo", "21": "twoone", "22": "twotwo"}
+        s_params = {"11": self.S11, "12": self.S12, "21": self.S21, "22": self.S22}
+        
+        # Clean suffix: remove non-alphanumeric characters for the command name
+        clean_suffix = "".join(filter(str.isalnum, suffix))
+        
+        output = [f"% S-Parameter Definitions: {suffix}"]
+        
+        for idx, val in s_params.items():
+            name = num_to_word[idx]
+            mag = np.abs(val)
+            ang = np.angle(val, deg=True)
+            db = 20 * np.log10(max(mag, 1e-9))
+            
+            # 1. Full polar form variable (e.g., \SoneoneStageA)
+            output.append(f"\\newcommand{{\\S{name}{clean_suffix}}}{{{mag:.3f} \\angle {ang:.1f}^\\circ}}")
+            
+            # 2. Magnitude only variable (e.g., \SoneoneMagStageA)
+            output.append(f"\\newcommand{{\\S{name}Mag{clean_suffix}}}{{{mag:.3f}}}")
+            
+            # 3. dB variable (e.g., \SoneoneDbStageA)
+            output.append(f"\\newcommand{{\\S{name}Db{clean_suffix}}}{{{db:.2f}}}")
+
+        return "\n".join(output)
 
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """
@@ -1146,3 +1175,4 @@ for n, val in G_coeffs.items():
     ])
 
     return G_matrix, G_coeffs, x
+
