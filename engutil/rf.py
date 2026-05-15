@@ -337,7 +337,7 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
     # --- Constant Operating Power Gain Circle --- 
 
     def operating_gain_circle(self, gain_db: float) -> Circle:
-        """
+        r"""
         Calculates the Gp circle for the Load plane (Gamma_L) - Eqs (3.7.4) and (3.7.5) in Gonzalez.
         
         LaTeX Formulas:
