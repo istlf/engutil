@@ -38,7 +38,6 @@ from .rf import (
     transform_series_element,
     parse_ads_data,
     plot_mag,
-    conversion_gain_corrected,
     conductance_matrix,
     calculate_vswr_out,
     conversion_gain,
