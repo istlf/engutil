@@ -41,7 +41,7 @@ from .rf import (
     conductance_matrix,
     calculate_vswr_out,
     conversion_gain,
-    conductance_matrix
+    conductance_matrix,
 )
 from .util import (
     load_complex_csv,
@@ -69,7 +69,9 @@ from .util import (
     save_points_as_dat,
     to_cartesian,
     to_polar,
-    to_db_pwr
+    to_db_pwr,
+    np2db,
+    db2np
 
 )
 

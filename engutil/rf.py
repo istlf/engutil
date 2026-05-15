@@ -119,6 +119,59 @@ class TwoPortNetwork:
         r = np.abs(self.S12 * self.S21) / np.abs(den)
         return Circle(c, r, "Load Stability")
 
+    @property
+    def get_stability_regions(self):
+        """
+        Determines if the 'Stable' region is Inside or Outside the stability circles.
+        Logic based on Gonzalez Section 3.3.
+        """
+        # 1. Source Side (Input) Stability
+        # Evaluated on the Load Stability Circle (Gamma_L plane)
+        # We check if Gamma_L = 0 (the origin) is stable. 
+        # It is stable if |S11| < 1.
+        load_circ = self.load_stability_circle
+        origin_inside_load_circ = np.abs(load_circ.center) < load_circ.radius
+        
+        if np.abs(self.S11) < 1:
+            # Origin is stable. If origin is inside, inside is stable.
+            load_stable_region = "Inside" if origin_inside_load_circ else "Outside"
+        else:
+            # Origin is unstable. If origin is inside, outside is stable.
+            load_stable_region = "Outside" if origin_inside_load_circ else "Inside"
+
+        # 2. Load Side (Output) Stability
+        # Evaluated on the Source Stability Circle (Gamma_S plane)
+        # We check if Gamma_S = 0 (the origin) is stable. 
+        # It is stable if |S22| < 1.
+        src_circ = self.source_stability_circle
+        origin_inside_src_circ = np.abs(src_circ.center) < src_circ.radius
+        
+        if np.abs(self.S22) < 1:
+            # Origin is stable.
+            src_stable_region = "Inside" if origin_inside_src_circ else "Outside"
+        else:
+            # Origin is unstable.
+            src_stable_region = "Outside" if origin_inside_src_circ else "Inside"
+
+        return {
+            "load_plane_stable_region": load_stable_region, # Where you plot Gamma_L
+            "source_plane_stable_region": src_stable_region  # Where you plot Gamma_S
+        }
+    @property
+    def print_stability_summary(self):
+        k = self.K # Assuming you have a K-factor property
+        regions = self.get_stability_regions
+        
+        print(f"--- Stability Summary ---")
+        print(f"K-factor: {k:.3f}")
+        if k > 1 and np.abs(self.delta) < 1:
+            print("Status: Unconditionally Stable (Entire Smith Chart is safe)")
+        else:
+            print("Status: Conditionally Stable (Watch the circles!)")
+            print(f"On Gamma_L plane (Load): Stable region is {regions['load_plane_stable_region']} the circle.")
+            print(f"On Gamma_S plane (Source): Stable region is {regions['source_plane_stable_region']} the circle.")
+
+
     def Gamma_Ms(self, latex=False):
         # Calculate intermediate values
         # Calculate stability factor K first to see if a match is even possible
@@ -649,7 +702,7 @@ def to_linear(val):
 import numpy as np
 
 def reflection_2_impedance(gamma, z0=50):
-    """
+    r"""
     Convert a complex reflection coefficient (Gamma) to impedance.
 
     Parameters
@@ -755,7 +808,7 @@ def C_LP_to_BP(omega_0, Delta, C, R0):
 
 
 def parse_ads_data(file_path):
-    """
+    r"""
     Parses an ADS exported .txt file and returns frequency and magnitude vectors.
     """
     try:

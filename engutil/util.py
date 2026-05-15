@@ -328,4 +328,17 @@ def save_points_as_dat(filename, points):
 
 
 
+def db2np(db_val):
+    """
+    Converts decibels (dB) to Nepers (Np).
+    1 Np ≈ 8.686 dB
+    """
+    return db_val / (20 / np.log(10)) 
+    # Or simply: return db_val / 8.6858896
+
+def np2db(np_val):
+    """
+    Converts Nepers (Np) to decibels (dB).
+    """
+    return np_val * (20 / np.log(10))
     
