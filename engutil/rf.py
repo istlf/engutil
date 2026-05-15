@@ -44,10 +44,24 @@ class TwoPortNetwork:
     
     @property
     def delta(self):
+        r"""
+        \Delta = S_{11}S_{22} - S_{12}S_{21}
+        """
         return (self.S11 * self.S22) - (self.S12 * self.S21)
-        
+
+
     @property
     def K(self):
+        r"""
+        \[
+        K =
+        \frac{
+            1 - |S_{11}|^2 - |S_{22}|^2 + |\Delta|^2
+        }{
+            2|S_{12}S_{21}|
+        }
+        \]
+        """
         num = 1 - np.abs(self.S11)**2 - np.abs(self.S22)**2 + np.abs(self.delta)**2
         den = 2 * np.abs(self.S12 * self.S21)
         return num / den
@@ -55,22 +69,26 @@ class TwoPortNetwork:
     @property
     def is_unconditionally_stable(self):
         # returns true if K > 1 and delta < 1 
+        r"""
+        K > 1 \quad \text{and} \quad |\Delta| < 1
+        """
         return (self.K > 1) and (np.abs(self.delta) < 1)
-    def get_z_in(self, gamma_l):
-        gin = self.gamma_in(gamma_l)
-        return self.z0 * (1 + gin) / (1 - gin)
 
     def get_z_out(self, gamma_s):
+        r"""
+        \[
+        Z_{\mathrm{out}} = Z_0 \frac{1 + \Gamma_{\mathrm{out}}}{1 - \Gamma_{\mathrm{out}}}
+        \]
+        """
         gout = self.gamma_out(gamma_s)
         return self.z0 * (1 + gout) / (1 - gout)
     
     def get_z_in(self, gamma_l):
+        r"""
+        Z_{\mathrm{in}} = Z_0 \frac{1 + \Gamma_{\mathrm{in}}}{1 - \Gamma_{\mathrm{in}}}
+        """
         gin = self.gamma_in(gamma_l)
         return self.z0 * (1 + gin) / (1 - gin)
-
-    def get_z_out(self, gamma_s):
-        gout = self.gamma_out(gamma_s)
-        return self.z0 * (1 + gout) / (1 - gout)
 
     # --- Stability Circles ---
     @property
@@ -167,6 +185,7 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
     def unilateral_error_limits(self):
         """
         Calculates the bounds on the ratio GT / GTU due to the unilateral assumption.
+        If they are with in a few tenths of a dB we can use unilateral assumption. 
         Returns a dict with linear bounds and dB bounds.
         """
         u = self.U
@@ -231,9 +250,17 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         return np.abs(self.S21)/np.abs(self.S12)
 
     def MAG(self, db=True):
-        """
+        r"""
         Calculates Maximum Available Gain (MAG). 
         Only defined if K > 1 and |delta| < 1.
+
+        \mathrm{MAG} =
+        \left|
+        \frac{S_{21}}{S_{12}}
+        \right|
+        \left(
+        K - \sqrt{K^2 - 1}
+        \right)
         """
         if self.is_unconditionally_stable:
             # 12.43 in Pozar
@@ -359,49 +386,114 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         return (1 + gamma_ref) / (1 - gamma_ref)
 
     def gamma_in(self, gamma_l):
+        r"""
+        \Gamma_{\mathrm{in}} =
+        S_{11} + \frac{S_{12}S_{21}\Gamma_L}{1 - S_{22}\Gamma_L}
+        """
         return self.S11 + (self.S12 * self.S21 * gamma_l) / (1 - self.S22 * gamma_l)
 
     def gamma_out(self, gamma_s):
+        r"""
+        \Gamma_{\mathrm{out}} =
+        S_{22} + \frac{S_{12}S_{21}\Gamma_S}{1 - S_{11}\Gamma_S}
+        """
         return self.S22 + (self.S12 * self.S21 * gamma_s) / (1 - self.S11 * gamma_s)
+    
 
-    # def G_T(self, gamma_s, gamma_l, db=False): 
-    #     # Gonzales 3.2.1 
-    #     g_in = self.gamma_in(gamma_l)
+
+    def vswr_in(self, gamma_s, gamma_l):
+        r"""
+        Calculates the Input VSWR.
+        2.8.1 Gonzales
+        Formula: |Gamma_a| = |(Gamma_in - Gamma_s*) / (1 - Gamma_in * Gamma_s)|
+
+        |\Gamma_a| = \left| \frac{\Gamma_{\text{IN}} - \Gamma_s^*}{1 - \Gamma_{\text{IN}}\Gamma_s} \right|
+
+        (\text{VSWR})_{\text{in}} = \frac{1 + |\Gamma_a|}{1 - |\Gamma_a|}
+        """
+        g_in = self.gamma_in(gamma_l)
         
-    #     term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
-    #     term_0 = np.abs(self.S21)**2
-    #     term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
+        # Calculate the magnitude of the generalized reflection coefficient Gamma_a
+        num = g_in - np.conj(gamma_s)
+        den = 1 - (g_in * gamma_s)
+        abs_gamma_a = np.abs(num / den)
         
-    #     gain = term_s * term_0 * term_l
-    #     return engutil.pow2db(gain) if db else gain
+        # Avoid division by zero if perfectly reflective
+        if abs_gamma_a >= 1.0:
+            return float('inf')
+            
+        return (1 + abs_gamma_a) / (1 - abs_gamma_a)
+
+    def vswr_out(self, gamma_s, gamma_l):
+        r"""
+        Calculates the Output VSWR. 
+        Gonzales 2.8.4
+        Formula: |Gamma_b| = |(Gamma_out - Gamma_L*) / (1 - Gamma_out * Gamma_L)|
+
+        (\text{VSWR})_{\text{out}} = \frac{1 + |\Gamma_b|}{1 - |\Gamma_b|}
+
+        |\Gamma_b| = \left| \frac{\Gamma_{\text{OUT}} - \Gamma_L^*}{1 - \Gamma_{\text{OUT}}\Gamma_L} \right|
+
+        """
+        g_out = self.gamma_out(gamma_s)
+        
+        # Calculate the magnitude of the generalized reflection coefficient Gamma_b
+        num = g_out - np.conj(gamma_l)
+        den = 1 - (g_out * gamma_l)
+        abs_gamma_b = np.abs(num / den)
+        
+        # Avoid division by zero if perfectly reflective
+        if abs_gamma_b >= 1.0:
+            return float('inf')
+        print(f"abs_gamma_b: {abs_gamma_b}")
+        return (1 + abs_gamma_b) / (1 - abs_gamma_b)
+
 
     def G_T(self, gamma_s, gamma_l, db=False, latex=False):
+        r"""_summary_
+        Gonzales 3.2.1
+ Calcualte transducer power gain with arbitrary source and load terminations.
+
+Z_s = 50
+Gamma_s = engutil.impedance_2_reflection(Z_s)
+Gamma_Lp = engutil.pol2cart((0.754, 136.5))
+
+G_Lp = PA.G_T(Gamma_s, Gamma_Lp, db=False, latex=True)
+G_Lp_db = engutil.pow2db(G_Lp)
+print(f"G_Lp: {G_Lp} => G_Lp_db: {G_Lp_db}")
+
+G_T = 
+\frac{1 - |\Gamma_S|^2}{|1 - \Gamma_{\mathrm{in}}\Gamma_S|^2}
+|S_{21}|^2
+\frac{1 - |\Gamma_L|^2}{|1 - S_{22}\Gamma_L|^2}
+
+
+
+        Parameters
+        ----------
+        gamma_s : _type_
+            _description_
+        gamma_l : _type_
+            _description_
+        db : bool, optional
+            _description_, by default False
+        latex : bool, optional
+            _description_, by default False
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         # Gonzales 3.2.1 
+        #
         g_in = self.gamma_in(gamma_l)
-        print(f"g_inds: {engutil.to_polar(g_in, latex=True)}")
+
         term_s = (1 - np.abs(gamma_s)**2) / np.abs(1 - g_in * gamma_s)**2
         term_0 = np.abs(self.S21)**2
         term_l = (1 - np.abs(gamma_l)**2) / np.abs(1 - self.S22 * gamma_l)**2
         
         gain = term_s * term_0 * term_l
-
-        if latex:
-            def cfmt(z):
-                r, phi = engutil.to_polar(z)
-                return rf"{r:.4f}\angle {phi:.2f}^\circ"
-
-            latex_str = rf"""
-    G_T = 
-    \frac{{1 - |{cfmt(gamma_s)}|^2}}{{|1 - ({cfmt(g_in)})({cfmt(gamma_s)})|^2}}
-    \cdot |{cfmt(self.S21)}|^2
-    \cdot \frac{{1 - |{cfmt(gamma_l)}|^2}}{{|1 - ({cfmt(self.S22)})({cfmt(gamma_l)})|^2}}
-    = {gain:.4f}
-    """
-            if db:
-                latex_str += rf" = {engutil.pow2db(gain):.2f}\,\text{{dB}}"
-            
-            print(latex_str)
-            return latex_str
 
         return engutil.pow2db(gain) if db else gain
 
@@ -964,38 +1056,85 @@ def plot_mag(f, resp, legend, title="Title", xlim=None, ylim=None, size=(14, 5),
 
 
 
-def conversion_gain_corrected(
-    G_minus1, # G matrix
+def conversion_gain(
     G0, # g matrix 
+    G_minus1, # G matrix
     Y_w1, # IF admittance
     Y_w1_w0, # RF emb admittance
-    Yin_w1_w0,
+    Yin_w1_w0, # RF input admittance
     Z_w1, # IF emb impedance 
     Z_w1_w0, # RF emb impedance
-    Rs # 13 
+    Rs = 0 # 13 
 ):
-    """_summary_
+    r"""
+    Calculate mixer conversion gain.
 
     Parameters
     ----------
-    G_minus1 : _type_
-        _description_
-    Z_w1 : _type_
-        _description_
+    G0 : complex
+        \( G_0 \) coefficient.
+
+    G_minus1 : complex
+        \( G_{-1} \) coefficient.
+
+    Y_w1 : complex
+        IF embedding admittance.
+
+    Y_w1_w0 : complex
+        RF embedding admittance.
+
+    Yin_w1_w0 : complex
+        RF input admittance.
+
+    Z_w1 : complex
+        IF embedding impedance.
+
+    Z_w1_w0 : complex
+        RF embedding impedance.
+
+    Rs : float, optional
+        Series resistance correction term.
 
     Returns
     -------
-    _type_
-        _description_
+    float
+        Conversion gain, typically in linear scale.
+    """ 
+    
+    r""" 
+    R_s = 13 
+    Y_in = G[0] - G[1]*G[1]/(G[0] + Y_emb_IF)
+    G_cnv_corrected = conversion_gain_corrected(G[1], G[0], Y_emb_IF, Y_emb_RF, Y_in, Z_emb_IF, Z_emb_RF, R_s)
+    G_cnv = complex(G_cnv_corrected).real
+    G_cnv_db = engutil.pow2db(G_cnv)
 
-    Example usage: 
-        R_s = 13 
-        Y_in = G[0] - G[1]*G[1]/(G[0] + Y_emb_IF)
-        G_cnv_corrected = conversion_gain_corrected(G[1], G[0], Y_emb_IF, Y_emb_RF, Y_in, Z_emb_IF, Z_emb_RF, R_s)
-        G_cnv = complex(G_cnv_corrected).real
-        G_cnv_db = engutil.pow2db(G_cnv)
+
+    G_{cnv}
+&=
+\left|
+\frac{G_{-1}}{G_0 + Y(\omega_1)}
+\right|^2
+\left|
+\frac{1}{Y(\omega_1+\omega_0) + Y_{in}(\omega_1+\omega_0)}
+\right|^2
+4\Re\{Y(\omega_1+\omega_0)\}\,
+\Re\{Y(\omega_1)\}
+
+    G_{cnv}' &=
+    \frac{
+\Re\{Z(\omega_1+\omega_0)-R_s\}
+}{
+\Re\{Z(\omega_1+\omega_0)\}
+}
+\,G_{cnv}\,
+\frac{
+\Re\{Z(\omega_1)-R_s\}
+}{
+\Re\{Z(\omega_1)\}
+}
 
     """
+    
     # Eq. 3.73 in nonlin analysis 
     G_cnv = (
         abs(G_minus1 / (G0 + Y_w1))**2
@@ -1010,7 +1149,7 @@ def conversion_gain_corrected(
         * (Z_w1.real - Rs) / Z_w1.real
     )
 
-    return G_cnv_corrected
+    return G_cnv, G_cnv_corrected
 
 
 def conductance_matrix(
