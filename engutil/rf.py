@@ -93,6 +93,12 @@ class TwoPortNetwork:
     # --- Stability Circles ---
     @property
     def source_stability_circle(self) -> Circle:
+        r"""
+        C_S &= \frac{(S_{11} - \Delta S_{22}^*)^*}{|S_{11}|^2 - |\Delta|^2} 
+        
+        R_S &= \left| \frac{S_{12}S_{21}}{|S_{11}|^2 - |\Delta|^2} \right|  
+        
+        """
         D = self.delta
         den = (np.abs(self.S11)**2 - np.abs(D)**2)
         c = np.conj(self.S11 - D * np.conj(self.S22)) / den
@@ -101,6 +107,12 @@ class TwoPortNetwork:
 
     @property
     def load_stability_circle(self) -> Circle:
+        r"""
+        C_L = \frac{(S_{22} - \Delta S_{11}^*)^*}{|S_{22}|^2 - |\Delta|^2}
+
+        R_L = \left| \frac{S_{12}S_{21}}{|S_{22}|^2 - |\Delta|^2} \right|
+
+        """
         D = self.delta
         den = (np.abs(self.S22)**2 - np.abs(D)**2)
         c = np.conj(self.S22 - D * np.conj(self.S11)) / den
