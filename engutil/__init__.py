@@ -39,7 +39,8 @@ from .rf import (
     parse_ads_data,
     plot_mag,
     conversion_gain_corrected,
-    conductance_matrix
+    conductance_matrix,
+    calculate_vswr_out,
 )
 from .util import (
     load_complex_csv,

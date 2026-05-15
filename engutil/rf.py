@@ -434,7 +434,7 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         return engutil.pow2db(gain) if db else gain
     
     def to_latex_macros(self, suffix=""):
-        """
+        r"""
         Generates newcommand lines for LaTeX.
         Example: newcommand{\SoneoneSuffix}{0.500 angle 20^\circ}
         """
@@ -463,6 +463,30 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
             output.append(f"\\newcommand{{\\S{name}Db{clean_suffix}}}{{{db:.2f}}}")
 
         return "\n".join(output)
+
+def calculate_vswr_out(gamma_out: complex, gamma_l: complex) -> float:
+    r"""
+    Calculates the output Voltage Standing Wave Ratio (VSWR_out).
+
+    LaTeX Formula:
+    (VSWR)_{out} = \frac{1 + |\Gamma_b|}{1 - |\Gamma_b|} \text{ where } |\Gamma_b| = \left| \frac{\Gamma_{OUT} - \Gamma_L^*}{1 - \Gamma_{OUT}\Gamma_L} \right|
+    """
+    
+    # Calculate |gamma_b| using the provided formula
+    # gamma_l.conjugate() represents the complex conjugate (Gamma_L*)
+    numerator = gamma_out - gamma_l.conjugate()
+    denominator = 1 - (gamma_out * gamma_l)
+    
+    mag_gamma_b = abs(numerator / denominator)
+    
+    # Check for boundary conditions where VSWR approaches infinity
+    if mag_gamma_b >= 1.0:
+        return float('inf')
+        
+    # Calculate VSWR_out
+    vswr_out = (1 + mag_gamma_b) / (1 - mag_gamma_b)
+    print(f"|gamma_b|={mag_gamma_b:.3f}")
+    return vswr_out
 
 def calc_transducer_gain(S21, S22, Gamma_s, Gamma_L, Gamma_in):
     """
