@@ -383,7 +383,13 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
     # --- Constant Gain Circles (Available Gain) ---
 
     def available_gain_circle(self, gain_db: float) -> Circle:
-        """Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales"""
+        r"""Calculates the Ga circle for the Source plane (Gamma_S) - page 257 in Gonzales
+        
+        C_a = \frac{g_a C_1^*}{1 + g_a(|S_{11}|^2 - |\Delta|^2)}
+
+        r_a = \frac{[1 - 2K|S_{12}S_{21}|g_a + |S_{12}S_{21}|^2 g_a^2]^{1/2}}{|1 + g_a(|S_{11}|^2 - |\Delta|^2)|}
+        
+        """
         Ga =  10**(gain_db / 10)
         ga = Ga / (np.abs(self.S21)**2)
         
@@ -402,6 +408,46 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         ra = num_r / np.abs(den)
         #print(f"CA: {engutil.to_polar(ca, latex=True)} and rs: {engutil.to_polar(ra, latex=True)}")
         return Circle(ca, ra, f"Ga={gain_db}dB")
+    
+    # --- Mapped available gain circle
+
+    def mapped_available_gain_circle(self, gain_db: float) -> Circle:
+        r"""
+        Maps a circle from the Gamma_S plane (e.g., constant Ga circle) 
+        to the Gamma_OUT plane.
+        
+        LaTeX Formulas:
+        C_o = \frac{(1 - S_{11}C_a)(S_{22} - \Delta C_a)^* - r_a^2 \Delta^* S_{11}}{|1 - S_{11}C_a|^2 - r_a^2 |S_{11}|^2}
+        r_o = \frac{r_a |S_{12} S_{21}|}{\left| |1 - S_{11}C_a|^2 - r_a^2 |S_{11}|^2 \right|}
+        """
+        
+        # --- User-defined section for Ca and Ra ---
+        # Example: getting them from your existing available_gain_circle method
+        ga_circle = self.available_gain_circle(gain_db)
+        ca = ga_circle.center
+        ra = ga_circle.radius
+        # ------------------------------------------
+
+        # Pre-calculate common terms for efficiency
+        s11_ca = self.S11 * ca
+        delta_ca = self.delta * ca
+        
+        # Calculate the denominator common to both formulas
+        denominator = np.abs(1 - s11_ca)**2 - (ra**2) * (np.abs(self.S11)**2)
+        
+        # Calculate Center Co
+        # Numerator: (1 - S11*Ca) * (S22 - Delta*Ca)* - Ra^2 * Delta* * S11
+        num_co = ((1 - s11_ca) * np.conj(self.S22 - delta_ca)) - \
+                (ra**2 * np.conj(self.delta) * self.S11)
+        co = num_co / denominator
+        
+        # Calculate Radius ro
+        # Numerator: Ra * |S12 * S21|
+        num_ro = ra * np.abs(self.S12 * self.S21)
+        # The denominator for radius is the absolute value of the common denominator
+        ro = num_ro / np.abs(denominator)
+        
+        return Circle(co, ro, f"Ga={gain_db}dB mapped to Out")
 
     # --- Noise Figure Circles ---
 
