@@ -627,6 +627,8 @@ def reflection_2_impedance(gamma, z0=50):
     (50+0j)
     >>> reflection_2_impedance(0.33333333, z0=50) # Gamma for 100 Ohm
     (99.99999925+0j)
+
+    Z = Z_0 \frac{1 + \Gamma}{1 - \Gamma}
     """
     gamma = np.asanyarray(gamma, dtype=complex)
     
@@ -638,7 +640,7 @@ def reflection_2_impedance(gamma, z0=50):
     return z.item() if z.ndim == 0 else z
 
 def impedance_2_reflection(z, z0=50):
-    """
+    r"""
     Convert a complex impedance (Z) to a reflection coefficient (Gamma).
 
     Parameters
@@ -661,6 +663,8 @@ def impedance_2_reflection(z, z0=50):
     0j
     >>> impedance_2_reflection(0, z0=50) # Short circuit
     (-1+0j)
+
+    \Gamma = frac{Z - Z_0}{Z + Z_0}
     """
     z = np.asanyarray(z, dtype=complex)
     
