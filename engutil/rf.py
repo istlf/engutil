@@ -535,6 +535,17 @@ C_2 &= S_{{22}} - \Delta S_{{11}}^* = {cfmt(C2)} \\
         S_{11} + \frac{S_{12}S_{21}\Gamma_L}{1 - S_{22}\Gamma_L}
         """
         return self.S11 + (self.S12 * self.S21 * gamma_l) / (1 - self.S22 * gamma_l)
+    
+    def gamma_s(self, gamma_out):
+        r"""
+        calculates gamma s from gamma out. IE. what source should i have to get a specific output refelction coefficient
+
+        solved for gamma_s in the gamma_out function
+
+        \Gamma_S = \frac{\Gamma_{OUT} - S_{22}}{\Gamma_{OUT} S_{11} - \Delta}
+
+        """
+        return (gamma_out - self.S22)/(gamma_out*self.S11 - self.delta)
 
     def gamma_out(self, gamma_s):
         r"""
