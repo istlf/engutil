@@ -1089,6 +1089,12 @@ def transform_series_element(gk, z0, omega0, delta):
     """
     Transforms a prototype series inductor (gk) into a series L-C tank.
     Pozar Eq 8.74a, 8.74b
+
+    L_k' &= \frac{L_k}{\Delta \omega_0} \\    
+    C_k' &= \frac{\Delta}{\omega_0 L_k}
+
+
+
     """
     L_series = (gk * z0) / (omega0 * delta)
     C_series = delta / (gk * z0 * omega0)
@@ -1098,6 +1104,9 @@ def transform_shunt_element(gk, z0, omega0, delta):
     """
     Transforms a prototype shunt capacitor (gk) into a parallel L-C tank.
     Pozar Eq 8.74c, 8.74d
+
+    L_k' &= \frac{\Delta}{\omega_0 C_k} \\
+    C_k' &= \frac{C_k}{\Delta \omega_0}
     """
     L_parallel = (delta * z0) / (gk * omega0)
     C_parallel = gk / (delta * z0 * omega0)
@@ -1385,3 +1394,57 @@ for n, val in G_coeffs.items():
 
     return G_matrix, G_coeffs, x
 
+
+
+
+
+
+
+def solve_line_length(gamma_start, target_phase_deg):
+    r"""
+    Calculates the required line length (in wavelengths) to rotate 
+    a reflection coefficient to a specific target phase.
+
+
+G_s = 0.6 * np.exp(1j * np.radians(-130))
+length = solve_line_length(G_s, 180)
+
+theta_deg = get_electrical_length(length)
+print(f"theta_deg: {theta_deg}")
+
+
+
+    """
+    # Get current phase in degrees (-180 to 180)
+    current_phase = np.degrees(np.angle(gamma_start))
+    
+    # Calculate required shift. We use modulo 360 because lines 
+    # repeat every half-wavelength (360 degrees of Gamma phase).
+    # Moving 'Towards Generator' adds negative phase to the wave, 
+    # but Pozar's formula in this chapter uses +2j*beta*l.
+    delta_phi = (target_phase_deg - current_phase) % 360
+    print(f"delta_phi: {delta_phi}")
+    # delta_phi = 2 * beta * l = 2 * (360/lambda) * l
+    # So: l/lambda = delta_phi / 720
+    l_over_lambda = delta_phi / 720
+    print(f"l_over_lambda: {l_over_lambda}")
+    
+    return l_over_lambda
+
+def get_electrical_length(l_over_lambda):
+    """
+    
+    Converts length in wavelengths to electrical length (theta = beta*l)
+
+
+G_s = 0.6 * np.exp(1j * np.radians(-130))
+length = solve_line_length(G_s, 180)
+
+theta_deg = get_electrical_length(length)
+print(f"theta_deg: {theta_deg}")
+
+    """
+    theta_rad = 2 * np.pi * l_over_lambda
+    theta_deg = 360 * l_over_lambda
+    
+    return theta_deg, theta_rad
