@@ -193,10 +193,72 @@ class SLEM:
         r"""
         t_{d,even} = \frac{l}{v_{p,even}}
         """
-        return length / self.vp_even()
+        return length / self.vp_even
 
     def td_odd(self, length):
         r"""
         t_{d,odd} = \frac{l}{v_{p,odd}}
         """
-        return length / self.vp_odd()
+        return length / self.vp_odd
+    
+    def plot_slem(self, VS, RT, RS, length, mode="even", start=1, num_bounces=5, rise_time=0.1):
+        """
+        
+        
+        Args:
+            RS, RT: Source and Termination resistances (Ohms)
+            VS: Source Voltage (Volts)
+            length: Physical length of line in meters
+            mode: 'even' or 'odd'
+            num_bounces: Number of diagonal segments to draw
+            start: Starting time in ns 
+            rise_time: rise time in ns
+        """
+
+        if mode == "even":
+            vp = self.vp_even
+            td = self.td_even(length=length)*1e9
+            vstart_0 = self.v0_even(RS=RS, VS=VS)
+            vinf_0 = self.v_inf_even(RS=RS,RT=RT,VS=VS)
+            gamma_l = self.gamma_load_even(RT=RT)
+            gamma_s = self.gamma_source_even(RS=RS)
+        
+        t = np.zeros(num_bounces + 1)
+        v_0 = np.zeros(num_bounces + 1)
+        v_l = np.zeros(num_bounces + 1)
+        t[0] = 0
+        t[1] = start
+
+        for i in range(num_bounces + 1):
+            if i == 0:
+                continue
+            if i == 1:
+                v_0[i] = vstart_0
+                reffl = vstart_0
+                continue
+
+            t[i] = t[i-1] + td
+
+            if i == 2:
+                v_l[i] = v_0[i-1] + reffl*gamma_l
+                reffl = reffl*gamma_l
+                continue
+
+            # EVEN aka far end
+            if i%2 == 0:
+                v_l[i] = v_l[i-1] + reffl*gamma_l
+                reffl = reffl*gamma_l
+            # ODD aka near end
+            if i%2 == 1:
+                v_0[i] = v_0[i-2] + reffl
+                reffl = reffl*gamma_s
+
+        print(v_0)
+        print(v_l)
+
+
+            
+            
+
+
+
