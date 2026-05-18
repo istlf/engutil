@@ -283,68 +283,6 @@ class SLEM:
         plt.legend(loc='upper right', fontsize='small')
         plt.show()
 
-    def plot_odd_differential(self, VS, RT, RS, length, start=1.0, num_bounces=5, rise_time=0.1):
-            """
-            Plots both rising and falling edges for odd-mode differential signaling.
-            Matches the visual style of High-Speed Digital Design textbook diagrams.
-            """
-            # 1. Parameter calculation
-            td = self.td_odd(length=length) * 1e9
-            v_inc = self.v0_odd(RS=RS, VS=VS)
-            gamma_l = self.gamma_load_odd(RT=RT)
-            gamma_s = self.gamma_source_odd(RS=RS)
-            v_ss = self.v_inf_rising(RS, RT, VS) # Steady state voltage
-
-            # 2. Setup continuous time simulation
-            t_max = start + (num_bounces + 1) * td
-            t_axis = np.linspace(0, t_max, 2500)
-            
-            # base_rising represents a signal starting at 0V
-            base_rising_z0 = np.zeros_like(t_axis)
-            base_rising_zl = np.zeros_like(t_axis)
-
-            def ramp(t, t_arr, tr): return np.clip((t - t_arr) / tr, 0, 1)
-
-            curr_amp = v_inc
-            for i in range(num_bounces):
-                t_arr = start + i * td
-                if i == 0:
-                    base_rising_z0 += curr_amp * ramp(t_axis, t_arr, rise_time)
-                elif i % 2 == 1: # Arrives at load
-                    base_rising_zl += curr_amp * (1 + gamma_l) * ramp(t_axis, t_arr, rise_time)
-                    curr_amp *= gamma_l
-                else: # Arrives back at source
-                    base_rising_z0 += curr_amp * (1 + gamma_s) * ramp(t_axis, t_arr, rise_time)
-                    curr_amp *= gamma_s
-
-            # 3. Create the differential pair: v (falling) and v_bar (rising)
-            v_z0, v_zl = v_ss - base_rising_z0, v_ss - base_rising_zl
-            vbar_z0, vbar_zl = base_rising_z0, base_rising_zl
-
-            # 4. Plotting to match textbook style
-            plt.figure(figsize=(10, 6))
-            
-            # Source signals (Solid)
-            plt.plot(t_axis, v_z0, 'k-', label='$v(z=0)$')
-            plt.plot(t_axis, vbar_z0, 'k-', label='$\\bar{v}(z=0)$')
-            
-            # Load signals (Dashed)
-            plt.plot(t_axis, v_zl, 'k--', label='$v(z=l)$')
-            plt.plot(t_axis, vbar_zl, 'k--', label='$\\bar{v}(z=l)$')
-
-            # Annotation labels (positioned like the screenshot)
-            plt.text(0.1, v_ss+0.02, '$v(z=0)$', fontsize=11)
-            plt.text(0.1, -0.05, '$\\bar{v}(z=0)$', fontsize=11)
-            plt.text(t_max*0.75, -0.05, '$v(z=l)$', fontsize=11)
-            plt.text(t_max*0.75, v_ss+0.02, '$\\bar{v}(z=l)$', fontsize=11)
-
-            plt.xlabel('Time [ns]')
-            plt.ylabel('Voltage [V]')
-            plt.ylim(-0.1, v_ss + 0.1)
-            plt.xlim(0, t_max)
-            plt.grid(True, linestyle=':', alpha=0.6)
-            plt.show()
-
 
 # def generate_lattice_table(slem, RS, RT, VS, length, mode='even', offset=1e-9, max_steps=8, threshold=1e-5):
 #     """
