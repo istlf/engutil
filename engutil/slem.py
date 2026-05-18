@@ -65,6 +65,27 @@ class SLEM:
         Z_{0,odd} = \sqrt{\frac{L_{0} - L_{M}}{C_{g} + 2C_{M}}}
         """
         return np.sqrt((self.L0 - self.LM) / (self.Cg + 2 * self.CM))
+    @property
+    def Z_diff(self):
+        r"""
+
+        Z_{diff} = 2Z_{0,odd}
+
+        Differential Impedance: The impedance seen between the two lines.
+        Zdiff = 2 * Z_odd
+        """
+        return 2 * self.Z0_odd
+
+    @property
+    def Z_comm(self):
+        r"""
+
+        Z_{comm} = \frac{1}{2} Z_{0,even}
+
+        Common Mode Impedance: The impedance of the pair driven together.
+        Zcomm = 0.5 * Z_even
+        """
+        return 0.5 * self.Z0_even
 
     @property
     def vp_isolated(self):
@@ -201,6 +222,182 @@ class SLEM:
         """
         return length / self.vp_odd
 
+
+
+
+    # --- Noise and crosstalk --- 
+    @property
+    def K_L(self):
+        r"""
+        Eq 4-55 in [Hall]
+        K_L = \frac{L_M}{L_0}
+        """
+        return self.LM/self.L0
+    
+    @property
+    def K_C(self):
+        r"""
+        Eq 4-51 [Hall]
+        K_C = \frac{C_M}{C_g + C_M}
+
+        """
+        return self.CM/(self.Cg + self.CM)
+    
+    def v_f(self, line_length, t_r, V_S, ):
+        r"""
+        Eq. 4-60
+        v_f = \frac{1}{2}\left(K_C - K_L \right) \frac{l}{v_p}\frac{v}{t_r}
+        """
+        v_f = 1/2*(self.K_C - self.K_L)*line_length/self.vp_isolated*V_S/t_r 
+
+        return v_f 
+    
+    # def v_b(self):
+    #     r"""
+    #     Eq 4-63
+    #     v_b(t)=\frac{K_C+K_L}{4}\left[v_1(t)-v_1\left(\frac{t-2l}{v_p}\right)\right]
+    #     """
+    #     v_b = (self.K_C - self.K_L)
+    
+    def get_crosstalk_amplitudes(self, VS, RS, line_length, t_r):
+        # td and vp for the isolated line (SLEM assumes isolated-like parameters)
+        vp = self.vp_isolated
+        td = line_length / vp
+        
+        # Initial step voltage on the Aggressor line
+        # (Assuming source matched)
+        v_aggressor = (self.Z0_isolated / (RS + self.Z0_isolated)) * VS
+        
+        # Eq 4-60: Far-End (FEXT) Peak
+        # Amplitidue grows with length and speed of edge
+        v_f_peak = 0.5 * (self.K_C - self.K_L) * (line_length / vp) * (v_aggressor / t_r)
+        
+        # Eq 4-63: Near-End (NEXT) Peak
+        # Amplitude saturates once 2*td > tr
+        v_b_peak = ((self.K_C + self.K_L) / 4) * v_aggressor
+        
+        return v_b_peak, v_f_peak, td
+    def plot_crosstalk_combined(self, VS, RS, line_length, t_r_ns, start_ns=1.0):
+        """
+        Replicates the Aggressor/Victim crosstalk plot from High-Speed Digital Design.
+        """
+        # 1. Get Physical Constants
+        vb_peak, vf_peak, td_s = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r_ns*1e-9)
+        td = td_s * 1e9  # Convert propagation delay to ns
+        
+        # 2. Setup Time Axis
+        t_max = start_ns + 2*td + 1.0  # Show 1ns past the end of the NEXT pulse
+        t = np.linspace(0, t_max, 3000)
+        
+        def ramp(time, t_start, duration):
+            return np.clip((time - t_start) / duration, 0, 1)
+
+        # 3. Calculate Aggressor Waveforms
+        v_inc = (self.Z0_isolated / (RS + self.Z0_isolated)) * VS
+        v_agg_z0 = v_inc * ramp(t, start_ns, t_r_ns)
+        v_agg_zl = v_inc * ramp(t, start_ns + td, t_r_ns)
+
+        # 4. Calculate Victim Waveforms
+        # NEXT (z=0): Trapezoidal pulse of width 2*td
+        # v_vic_z0 = vb_peak * (ramp(t, start_ns, t_r_ns) - ramp(t, start_ns + 2*td, t_r_ns))
+        
+        # # FEXT (z=l): Narrow pulse of width t_r occurring at t_start + td
+        # # Using a windowing function to create the FEXT pulse
+        # v_vic_zl = np.where((t >= start_ns + td) & (t <= start_ns + td + t_r_ns), vf_peak, 0)
+
+        # 4. Calculate Victim Waveforms
+        # NEXT (z=0): Remains the same (Trapezoidal)
+        v_vic_z0 = vb_peak * (ramp(t, start_ns, t_r_ns) - ramp(t, start_ns + 2*td, t_r_ns))
+        
+        # FEXT (z=l): Triangle pulse
+        # We define 3 points for the triangle: Start, Peak (Middle), and End
+        t_fext_start = start_ns + td
+        t_fext_mid   = start_ns + td + (t_r_ns / 2)
+        t_fext_end   = start_ns + td + t_r_ns
+        
+        v_vic_zl = np.interp(t, 
+                             [t_fext_start, t_fext_mid, t_fext_end], 
+                             [0, vf_peak, 0], 
+                             left=0, right=0)
+
+        # 5. Plotting
+        plt.figure(figsize=(10, 6))
+        
+        # Aggressor signals
+        plt.plot(t, v_agg_z0, 'k-', color="#1f77b4", linewidth=2, label='$v_{Aggressor}(z=0)$')
+        plt.plot(t, v_agg_zl, '--', color="#000000", linewidth=2, label='$v_{Aggressor}(z=l)$')
+        
+        # Victim signals
+        plt.plot(t, v_vic_z0, 'k-', linewidth=2.5, label='$v_{Victim}(z=0)$')
+        plt.plot(t, v_vic_zl, 'k--', color="#d62728", linewidth=2.5, label='$v_{Victim}(z=l)$')
+
+        # Styling to match the screenshot
+        plt.xlabel('Time (ns)', fontsize=12)
+        plt.ylabel('Voltage (V)', fontsize=12)
+        plt.xlim(0, t_max)
+        plt.ylim(-0.3, 0.6) # Set to match your image Y-axis
+        plt.grid(False) # The screenshot has no grid
+        
+        # Customizing Ticks
+        plt.xticks(np.arange(0, t_max + 0.1, 0.5))
+        plt.yticks(np.arange(-0.3, 0.7, 0.1))
+        
+        # Adding labels directly near lines (optional) or use legend
+        plt.legend(frameon=False, loc='best', fontsize='medium')
+        
+        # Adding axis spines to match the 'box' look
+        ax = plt.gca()
+        for spine in ['top', 'right']:
+            ax.spines[spine].set_visible(True)
+            
+        plt.tight_layout()
+        plt.show()
+    def plot_crosstalk(self, VS, RS, line_length, t_r, start_ns=1.0):
+        # 1. Get amplitudes and timing
+        vb_peak, vf_peak, td_s = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r*1e-9)
+        td = td_s * 1e9  # Convert to ns
+        
+        # 2. Time Axis
+        t_max = start_ns + 2*td + (t_r * 3)
+        t = np.linspace(0, t_max, 2000)
+        
+        def ramp(time, t_start, duration):
+            return np.clip((time - t_start) / duration, 0, 1)
+
+        # 3. Calculate Waveforms
+        # NEXT: v_b(t) = K * [v1(t) - v1(t - 2td)]
+        # This creates a pulse starting at 'start_ns' and ending at 'start_ns + 2*td'
+        next_signal = vb_peak * (ramp(t, start_ns, t_r) - ramp(t, start_ns + 2*td, t_r))
+        
+        # FEXT: v_f(t) 
+        # This is a pulse that arrives at the far end (z=l) at time td
+        # It is effectively the derivative of the ramp.
+        # We model it as a pulse of width t_r centered at td.
+        fext_pulse = np.where((t >= start_ns + td) & (t <= start_ns + td + t_r), vf_peak, 0)
+        
+        # 4. Plotting
+        fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+        
+        # Top Plot: Near-End (z=0)
+        ax[0].plot(t, next_signal, 'k-', label='NEXT $v_b(t)$')
+        ax[0].set_ylabel('Voltage [V]')
+        ax[0].set_title(f'Crosstalk: Near-End ($z=0$)')
+        ax[0].grid(True, alpha=0.3)
+        ax[0].legend()
+        
+        # Bottom Plot: Far-End (z=l)
+        ax[1].plot(t, fext_pulse, 'r-', label='FEXT $v_f(t)$')
+        ax[1].set_ylabel('Voltage [V]')
+        ax[1].set_title(f'Crosstalk: Far-End ($z=l$)')
+        ax[1].set_xlabel('Time [ns]')
+        ax[1].grid(True, alpha=0.3)
+        ax[1].legend()
+        
+        plt.tight_layout()
+        plt.show()
+
+
+
     def plot_slem(self, VS, RT, RS, length, mode="even", edge="rising", start=1.0, num_bounces=5, rise_time=0.1):
         """
         Unified plotting function for transmission line transients.
@@ -286,8 +483,19 @@ class SLEM:
         plt.show()
 
     def generate_lattice_table(self, RS, RT, VS, length, mode='even', edge='rising', offset=1e-9, max_steps=8, threshold=1e-5):
-        """
-        Example: slem.generate_lattice_table(VS=1, RT=65, RS=65, length=0.2794, mode="odd", edge="rising")
+        r"""
+        Examples: 
+        # Even mode
+        slem.generate_lattice_table(R_S, R_T, V_S, line_length, mode='even', edge="rising")
+
+        # Odd mode - Line A: The "Positive" line (Rising)
+        slem.generate_lattice_table(R_S, R_T, V_S, line_length, mode='odd', edge='rising')
+
+        # Odd mode - Line B: The "Negative" line (Falling)
+        slem.generate_lattice_table(R_S, R_T, V_S, line_length, mode='odd', edge='falling')
+
+
+
         Generates a lattice simulation.
         - edge='rising': Pulse is +VS, totals start at 0.
         - edge='falling': Pulse is -VS, totals start at V_inf_rising.
@@ -361,3 +569,13 @@ class SLEM:
         print(f"{'-'*85}\nTarget Steady State: {target_v:.3f}V | Simulation Ended at: {total_v_z0:.4f}V")
         print(f"{'='*85}\n")
     
+    def print_impedance_report(self):
+        print(f"--- Transmission Line Impedance Report ---")
+        print(f"Isolated Impedance (Z0):   {self.Z0_isolated:.2f} Ω")
+        print(f"Even Mode Impedance (Zoe): {self.Z0_even:.2f} Ω")
+        print(f"Odd Mode Impedance (Zoo):  {self.Z0_odd:.2f} Ω")
+        print(f"-------------------------------------------")
+        print(f"Differential Impedance:    {self.Z_diff:.2f} Ω")
+        print(f"Common Mode Impedance:      {self.Z_comm:.2f} Ω")
+        print(f"------------------------------------------
+              
