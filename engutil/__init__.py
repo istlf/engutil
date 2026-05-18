@@ -75,6 +75,10 @@ from .util import (
 
 )
 
+from .slem import (
+    SLEM,
+)
+
 from .latex import (
     create_smith_chart_tex,
     append_point_to_tex,
