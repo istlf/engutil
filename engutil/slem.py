@@ -1,5 +1,6 @@
 import numpy as np
 import engutil
+import matplotlib.pyplot as plt
 
 """
 USAGE:
@@ -89,3 +90,113 @@ class SLEM:
         v_{p,odd} = \frac{1}{\sqrt{(L_{0} - L_{M})(C_{g} + 2C_{M})}}
         """
         return 1 / np.sqrt((self.L0 - self.LM) * (self.Cg + 2 * self.CM))
+    
+    # --- Initial Conditions (t=0, z=0) ---
+
+    def v0_even(self, RS, VS):
+        r"""
+        v(t=0, z=0)_{even} = \frac{Z_{0,even}}{R_S + Z_{0,even}} V_S
+        """
+        ze = self.Z0_even
+        return (ze / (RS + ze)) * VS
+
+    def i0_even(self, RS, VS):
+        r"""
+        i(t=0, z=0)_{even} = \frac{v(t=0, z=0)_{even}}{Z_{0,even}}
+        """
+        return self.v0_even(RS, VS) / self.Z0_even
+    
+    def v_inf_even(self, RS, RT, VS):
+        r"""
+        v(t=\infty)_{rising} = \frac{R_t}{R_S + R_t} V_S
+        """
+        return (RT / (RS + RT)) * VS
+
+    def i_inf_even(self, RS, RT, VS):
+        r"""
+        i(t=\infty)_{rising} = \frac{V_S}{R_S + R_t}
+        """
+        return VS / (RS + RT)
+
+    def v0_odd(self, RS, VS):
+        r"""
+        v(t=0, z=0)_{odd} = \frac{Z_{0,odd}}{R_S + Z_{0,odd}} V_S
+        """
+        zo = self.Z0_odd
+        return (zo / (RS + zo)) * VS
+
+    def i0_odd(self, RS, VS):
+        r"""
+        i(t=0, z=0)_{odd} = \frac{v(t=0, z=0)_{odd}}{Z_{0,odd}}
+        """
+        return self.v0_odd(RS, VS) / self.Z0_odd
+    
+    # --- Reflection Coefficients ---
+
+    def gamma_source_even(self, RS):
+        r"""
+        \Gamma(z=0)_{even} = \frac{R_S - Z_{0,even}}{R_S + Z_{0,even}}
+        """
+        ze = self.Z0_even
+        return (RS - ze) / (RS + ze)
+
+    def gamma_load_even(self, RT):
+        r"""
+        \Gamma(z=l)_{even} = \frac{R_T - Z_{0,even}}{R_T + Z_{0,even}}
+        """
+        ze = self.Z0_even
+        return (RT - ze) / (RT + ze)
+
+    def gamma_source_odd(self, RS):
+        r"""
+        \Gamma(z=0)_{odd} = \frac{R_S - Z_{0,odd}}{R_S + Z_{0,odd}}
+        """
+        zo = self.Z0_odd
+        return (RS - zo) / (RS + zo)
+
+    def gamma_load_odd(self, RT):
+        r"""
+        \Gamma(z=l)_{odd} = \frac{R_T - Z_{0,odd}}{R_T + Z_{0,odd}}
+        """
+        zo = self.Z0_odd
+        return (RT - zo) / (RT + zo)
+    
+    # --- Steady State Values (t=inf) ---
+
+    def v_inf_rising(self, RS, RT, VS):
+        r"""
+        v(t=\infty)_{rising} = \frac{R_t}{R_S + R_t} V_S
+        """
+        return (RT / (RS + RT)) * VS
+
+    def i_inf_rising(self, RS, RT, VS):
+        r"""
+        i(t=\infty)_{rising} = \frac{V_S}{R_S + R_t}
+        """
+        return VS / (RS + RT)
+
+    def v_inf_falling(self):
+        r"""
+        v(t=\infty)_{falling} = 0.000 V
+        """
+        return 0.0
+
+    def i_inf_falling(self):
+        r"""
+        i(t=\infty)_{falling} = 0.00 mA
+        """
+        return 0.0
+    
+    # --- Propagation Delay ---
+
+    def td_even(self, length):
+        r"""
+        t_{d,even} = \frac{l}{v_{p,even}}
+        """
+        return length / self.vp_even()
+
+    def td_odd(self, length):
+        r"""
+        t_{d,odd} = \frac{l}{v_{p,odd}}
+        """
+        return length / self.vp_odd()
