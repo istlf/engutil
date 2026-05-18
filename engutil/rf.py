@@ -1086,7 +1086,7 @@ print(np.pi*50*delta/(4*1.7058))
 
 
 def transform_series_element(gk, z0, omega0, delta):
-    """
+    r"""
     Transforms a prototype series inductor (gk) into a series L-C tank.
     Pozar Eq 8.74a, 8.74b
 
@@ -1101,7 +1101,7 @@ def transform_series_element(gk, z0, omega0, delta):
     return L_series, C_series
 
 def transform_shunt_element(gk, z0, omega0, delta):
-    """
+    r"""
     Transforms a prototype shunt capacitor (gk) into a parallel L-C tank.
     Pozar Eq 8.74c, 8.74d
 
