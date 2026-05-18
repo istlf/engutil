@@ -277,43 +277,37 @@ class SLEM:
         v_b_peak = ((self.K_C + self.K_L) / 4) * v_aggressor
         
         return v_b_peak, v_f_peak, td
-    def plot_crosstalk_combined(self, VS, RS, line_length, t_r_ns, start_ns=1.0):
+    
+
+    def plot_crosstalk_combined(self, VS, RS, line_length, t_r, start=1.0e-9):
         """
-        Replicates the Aggressor/Victim crosstalk plot from High-Speed Digital Design.
+        Replicates the Aggressor/Victim crosstalk plot using SI units (seconds).
+        Colors: Blue for Aggressor, Red for Victim.
         """
-        # 1. Get Physical Constants
-        vb_peak, vf_peak, td_s = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r_ns*1e-9)
-        td = td_s * 1e9  # Convert propagation delay to ns
+        # 1. Get Physical Constants (all in SI units)
+        vb_peak, vf_peak, td = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r)
         
-        # 2. Setup Time Axis
-        t_max = start_ns + 2*td + 1.0  # Show 1ns past the end of the NEXT pulse
-        t = np.linspace(0, t_max, 3000)
+        # 2. Setup Time Axis (Seconds)
+        # Show the full NEXT pulse (2*td) plus a buffer based on rise time
+        t_max = start + 2*td + (t_r * 10) 
+        t = np.linspace(0, t_max, 5000)
         
         def ramp(time, t_start, duration):
             return np.clip((time - t_start) / duration, 0, 1)
 
         # 3. Calculate Aggressor Waveforms
         v_inc = (self.Z0_isolated / (RS + self.Z0_isolated)) * VS
-        v_agg_z0 = v_inc * ramp(t, start_ns, t_r_ns)
-        v_agg_zl = v_inc * ramp(t, start_ns + td, t_r_ns)
+        v_agg_z0 = v_inc * ramp(t, start, t_r)
+        v_agg_zl = v_inc * ramp(t, start + td, t_r)
 
         # 4. Calculate Victim Waveforms
         # NEXT (z=0): Trapezoidal pulse of width 2*td
-        # v_vic_z0 = vb_peak * (ramp(t, start_ns, t_r_ns) - ramp(t, start_ns + 2*td, t_r_ns))
-        
-        # # FEXT (z=l): Narrow pulse of width t_r occurring at t_start + td
-        # # Using a windowing function to create the FEXT pulse
-        # v_vic_zl = np.where((t >= start_ns + td) & (t <= start_ns + td + t_r_ns), vf_peak, 0)
-
-        # 4. Calculate Victim Waveforms
-        # NEXT (z=0): Remains the same (Trapezoidal)
-        v_vic_z0 = vb_peak * (ramp(t, start_ns, t_r_ns) - ramp(t, start_ns + 2*td, t_r_ns))
+        v_vic_z0 = vb_peak * (ramp(t, start, t_r) - ramp(t, start + 2*td, t_r))
         
         # FEXT (z=l): Triangle pulse
-        # We define 3 points for the triangle: Start, Peak (Middle), and End
-        t_fext_start = start_ns + td
-        t_fext_mid   = start_ns + td + (t_r_ns / 2)
-        t_fext_end   = start_ns + td + t_r_ns
+        t_fext_start = start + td
+        t_fext_mid   = start + td + (t_r / 2)
+        t_fext_end   = start + td + t_r
         
         v_vic_zl = np.interp(t, 
                              [t_fext_start, t_fext_mid, t_fext_end], 
@@ -323,35 +317,37 @@ class SLEM:
         # 5. Plotting
         plt.figure(figsize=(10, 6))
         
-        # Aggressor signals
-        plt.plot(t, v_agg_z0, 'k-', color="#1f77b4", linewidth=2, label='$v_{Aggressor}(z=0)$')
-        plt.plot(t, v_agg_zl, '--', color="#000000", linewidth=2, label='$v_{Aggressor}(z=l)$')
+        # Colors
+        c_agg = '#1f77b4' # Muted Blue
+        c_vic = '#d62728' # Crimson Red
         
-        # Victim signals
-        plt.plot(t, v_vic_z0, 'k-', linewidth=2.5, label='$v_{Victim}(z=0)$')
-        plt.plot(t, v_vic_zl, 'k--', color="#d62728", linewidth=2.5, label='$v_{Victim}(z=l)$')
+        # We multiply t by 1e9 in the plot call only so the axis labels are in ns
+        # Aggressor
+        plt.plot(t*1e9, v_agg_z0, color=c_agg, linestyle='-',  linewidth=2, label='$v_{Aggressor}(z=0)$')
+        plt.plot(t*1e9, v_agg_zl, color=c_agg, linestyle='--', linewidth=2, label='$v_{Aggressor}(z=l)$')
+        
+        # Victim
+        plt.plot(t*1e9, v_vic_z0, color=c_vic, linestyle='-',  linewidth=2.5, label='$v_{Victim}(z=0)$')
+        plt.plot(t*1e9, v_vic_zl, color=c_vic, linestyle='--', linewidth=2.5, label='$v_{Victim}(z=l)$')
 
-        # Styling to match the screenshot
+        # Styling
         plt.xlabel('Time (ns)', fontsize=12)
         plt.ylabel('Voltage (V)', fontsize=12)
-        plt.xlim(0, t_max)
-        plt.ylim(-0.3, 0.6) # Set to match your image Y-axis
-        plt.grid(False) # The screenshot has no grid
+        plt.xlim(0, t_max * 1e9)
+        plt.ylim(-0.3, 0.6)
+        plt.grid(True, linestyle=':', alpha=0.5)
         
-        # Customizing Ticks
-        plt.xticks(np.arange(0, t_max + 0.1, 0.5))
-        plt.yticks(np.arange(-0.3, 0.7, 0.1))
+        plt.legend(frameon=True, loc='upper right', fontsize='small')
         
-        # Adding labels directly near lines (optional) or use legend
-        plt.legend(frameon=False, loc='best', fontsize='medium')
-        
-        # Adding axis spines to match the 'box' look
+        # Clean up axes
         ax = plt.gca()
-        for spine in ['top', 'right']:
-            ax.spines[spine].set_visible(True)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
             
         plt.tight_layout()
         plt.show()
+
+
     def plot_crosstalk(self, VS, RS, line_length, t_r, start_ns=1.0):
         # 1. Get amplitudes and timing
         vb_peak, vf_peak, td_s = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r*1e-9)
@@ -577,5 +573,4 @@ class SLEM:
         print(f"-------------------------------------------")
         print(f"Differential Impedance:    {self.Z_diff:.2f} Ω")
         print(f"Common Mode Impedance:      {self.Z_comm:.2f} Ω")
-        print(f"------------------------------------------
-              
+        print(f"------------------------------------------")
