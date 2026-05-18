@@ -200,65 +200,147 @@ class SLEM:
         t_{d,odd} = \frac{l}{v_{p,odd}}
         """
         return length / self.vp_odd
-    
-    def plot_slem(self, VS, RT, RS, length, mode="even", start=1, num_bounces=5, rise_time=0.1):
+
+    def plot_slem(self, VS, RT, RS, length, mode="even", edge="rising", start=1.0, num_bounces=5, rise_time=0.1):
         """
-        
+        Unified plotting function for transmission line transients.
         
         Args:
-            RS, RT: Source and Termination resistances (Ohms)
-            VS: Source Voltage (Volts)
-            length: Physical length of line in meters
-            mode: 'even' or 'odd'
-            num_bounces: Number of diagonal segments to draw
-            start: Starting time in ns 
-            rise_time: rise time in ns
+            VS, RT, RS: Source Voltage, Termination Resistance, Source Resistance.
+            length: Physical length of line [m].
+            mode: "even" or "odd".
+            edge: "rising", "falling", or "both" (differential).
+            start: Time the transition starts [ns].
+            num_bounces: Number of wave arrivals to simulate.
+            rise_time: Time for the signal to transition [ns].
         """
-
+        # 1. Parameter Selection
         if mode == "even":
-            vp = self.vp_even
-            td = self.td_even(length=length)*1e9
-            vstart_0 = self.v0_even(RS=RS, VS=VS)
-            vinf_0 = self.v_inf_even(RS=RS,RT=RT,VS=VS)
-            gamma_l = self.gamma_load_even(RT=RT)
-            gamma_s = self.gamma_source_even(RS=RS)
+            td = self.td_even(length) * 1e9
+            v_inc = self.v0_even(RS, VS)
+            gamma_l = self.gamma_load_even(RT)
+            gamma_s = self.gamma_source_even(RS)
+        else:
+            td = self.td_odd(length) * 1e9
+            v_inc = self.v0_odd(RS, VS)
+            gamma_l = self.gamma_load_odd(RT)
+            gamma_s = self.gamma_source_odd(RS)
+            
+        v_ss = (RT / (RS + RT)) * VS  # Steady state voltage
+
+        # 2. Simulation Setup
+        t_max = start + (num_bounces + 1) * td
+        t_axis = np.linspace(0, t_max, 2500)
         
-        t = np.zeros(num_bounces + 1)
-        v_0 = np.zeros(num_bounces + 1)
-        v_l = np.zeros(num_bounces + 1)
-        t[0] = 0
-        t[1] = start
+        # We calculate a 'base_rising' signal (0 to Vss)
+        # All other cases (falling, differential) are derived from this.
+        z0_base = np.zeros_like(t_axis)
+        zl_base = np.zeros_like(t_axis)
 
-        for i in range(num_bounces + 1):
+        def ramp(t, t_arr, tr): return np.clip((t - t_arr) / tr, 0, 1)
+
+        curr_amp = v_inc
+        for i in range(num_bounces):
+            t_arr = start + i * td
             if i == 0:
-                continue
-            if i == 1:
-                v_0[i] = vstart_0
-                reffl = vstart_0
-                continue
+                z0_base += curr_amp * ramp(t_axis, t_arr, rise_time)
+            elif i % 2 == 1: # Hits load (z=l)
+                zl_base += curr_amp * (1 + gamma_l) * ramp(t_axis, t_arr, rise_time)
+                curr_amp *= gamma_l
+            else: # Returns to source (z=0)
+                z0_base += curr_amp * (1 + gamma_s) * ramp(t_axis, t_arr, rise_time)
+                curr_amp *= gamma_s
 
-            t[i] = t[i-1] + td
-
-            if i == 2:
-                v_l[i] = v_0[i-1] + reffl*gamma_l
-                reffl = reffl*gamma_l
-                continue
-
-            # EVEN aka far end
-            if i%2 == 0:
-                v_l[i] = v_l[i-1] + reffl*gamma_l
-                reffl = reffl*gamma_l
-            # ODD aka near end
-            if i%2 == 1:
-                v_0[i] = v_0[i-2] + reffl
-                reffl = reffl*gamma_s
-
-        print(v_0)
-        print(v_l)
-
-
+        # 3. Handle Edge Types
+        plt.figure(figsize=(10, 6))
+        
+        if edge == "rising":
+            plt.plot(t_axis, z0_base, 'k-', label='$v(z=0)$')
+            plt.plot(t_axis, zl_base, 'k--', label='$v(z=l)$')
+            title = f"Rising Edge ({mode.capitalize()} Mode)"
             
+        elif edge == "falling":
+            plt.plot(t_axis, v_ss - z0_base, 'k-', label='$v(z=0)$')
+            plt.plot(t_axis, v_ss - zl_base, 'k--', label='$v(z=l)$')
+            title = f"Falling Edge ({mode.capitalize()} Mode)"
             
+        elif edge == "both":
+            # Rising pair
+            plt.plot(t_axis, z0_base, 'k-', label='$v_{rise}(z=0)$')
+            plt.plot(t_axis, zl_base, 'k--', label='$v_{rise}(z=l)$')
+            # Falling pair
+            plt.plot(t_axis, v_ss - z0_base, 'r-', label='$v_{fall}(z=0)$')
+            plt.plot(t_axis, v_ss - zl_base, 'r--', label='$v_{fall}(z=l)$')
+            title = f"Both rising and falling edge ({mode.capitalize()} Mode)"
 
+        # 4. Styling
+        plt.title(title)
+        plt.xlabel('Time [ns]')
+        plt.ylabel('Voltage [V]')
+        plt.xlim(0, t_max)
+        plt.ylim(-0.1, v_ss + 0.1)
+        plt.grid(True, linestyle=':', alpha=0.6)
+        plt.legend(loc='upper right', fontsize='small')
+        plt.show()
 
+    def plot_odd_differential(self, VS, RT, RS, length, start=1.0, num_bounces=5, rise_time=0.1):
+            """
+            Plots both rising and falling edges for odd-mode differential signaling.
+            Matches the visual style of High-Speed Digital Design textbook diagrams.
+            """
+            # 1. Parameter calculation
+            td = self.td_odd(length=length) * 1e9
+            v_inc = self.v0_odd(RS=RS, VS=VS)
+            gamma_l = self.gamma_load_odd(RT=RT)
+            gamma_s = self.gamma_source_odd(RS=RS)
+            v_ss = self.v_inf_rising(RS, RT, VS) # Steady state voltage
 
+            # 2. Setup continuous time simulation
+            t_max = start + (num_bounces + 1) * td
+            t_axis = np.linspace(0, t_max, 2500)
+            
+            # base_rising represents a signal starting at 0V
+            base_rising_z0 = np.zeros_like(t_axis)
+            base_rising_zl = np.zeros_like(t_axis)
+
+            def ramp(t, t_arr, tr): return np.clip((t - t_arr) / tr, 0, 1)
+
+            curr_amp = v_inc
+            for i in range(num_bounces):
+                t_arr = start + i * td
+                if i == 0:
+                    base_rising_z0 += curr_amp * ramp(t_axis, t_arr, rise_time)
+                elif i % 2 == 1: # Arrives at load
+                    base_rising_zl += curr_amp * (1 + gamma_l) * ramp(t_axis, t_arr, rise_time)
+                    curr_amp *= gamma_l
+                else: # Arrives back at source
+                    base_rising_z0 += curr_amp * (1 + gamma_s) * ramp(t_axis, t_arr, rise_time)
+                    curr_amp *= gamma_s
+
+            # 3. Create the differential pair: v (falling) and v_bar (rising)
+            v_z0, v_zl = v_ss - base_rising_z0, v_ss - base_rising_zl
+            vbar_z0, vbar_zl = base_rising_z0, base_rising_zl
+
+            # 4. Plotting to match textbook style
+            plt.figure(figsize=(10, 6))
+            
+            # Source signals (Solid)
+            plt.plot(t_axis, v_z0, 'k-', label='$v(z=0)$')
+            plt.plot(t_axis, vbar_z0, 'k-', label='$\\bar{v}(z=0)$')
+            
+            # Load signals (Dashed)
+            plt.plot(t_axis, v_zl, 'k--', label='$v(z=l)$')
+            plt.plot(t_axis, vbar_zl, 'k--', label='$\\bar{v}(z=l)$')
+
+            # Annotation labels (positioned like the screenshot)
+            plt.text(0.1, v_ss+0.02, '$v(z=0)$', fontsize=11)
+            plt.text(0.1, -0.05, '$\\bar{v}(z=0)$', fontsize=11)
+            plt.text(t_max*0.75, -0.05, '$v(z=l)$', fontsize=11)
+            plt.text(t_max*0.75, v_ss+0.02, '$\\bar{v}(z=l)$', fontsize=11)
+
+            plt.xlabel('Time [ns]')
+            plt.ylabel('Voltage [V]')
+            plt.ylim(-0.1, v_ss + 0.1)
+            plt.xlim(0, t_max)
+            plt.grid(True, linestyle=':', alpha=0.6)
+            plt.show()
