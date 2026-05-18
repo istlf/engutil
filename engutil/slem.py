@@ -204,6 +204,8 @@ class SLEM:
     def plot_slem(self, VS, RT, RS, length, mode="even", edge="rising", start=1.0, num_bounces=5, rise_time=0.1):
         """
         Unified plotting function for transmission line transients.
+
+        Example: slem.plot_slem(VS=1, RT=65, RS=65, length=0.2794, mode="even", start=1, num_bounces=5, rise_time=0.1, edge="rising")
         
         Args:
             VS, RT, RS: Source Voltage, Termination Resistance, Source Resistance.
@@ -283,169 +285,79 @@ class SLEM:
         plt.legend(loc='upper right', fontsize='small')
         plt.show()
 
+    def generate_lattice_table(self, RS, RT, VS, length, mode='even', edge='rising', offset=1e-9, max_steps=8, threshold=1e-5):
+        """
+        Example: slem.generate_lattice_table(VS=1, RT=65, RS=65, length=0.2794, mode="odd", edge="rising")
+        Generates a lattice simulation.
+        - edge='rising': Pulse is +VS, totals start at 0.
+        - edge='falling': Pulse is -VS, totals start at V_inf_rising.
+        """
+        is_rising = edge.lower() == 'rising'
+        v_sign = 1.0 if is_rising else -1.0
 
-# def generate_lattice_table(slem, RS, RT, VS, length, mode='even', offset=1e-9, max_steps=8, threshold=1e-5):
-#     """
-#     Generates a lattice simulation using an instance of the SLEM class.
-#     """
-#     # Dynamically select class methods based on mode
-#     if mode.lower() == 'even':
-#         v0 = slem.v0_even(RS, VS)
-#         i0 = slem.i0_even(RS, VS)
-#         gamma_s = slem.gamma_source_even(RS)
-#         gamma_l = slem.gamma_load_even(RT)
-#         td = slem.td_even(length)
-#     else:
-#         v0 = slem.v0_odd(RS, VS)
-#         i0 = slem.i0_odd(RS, VS)
-#         gamma_s = slem.gamma_source_odd(RS)
-#         gamma_l = slem.gamma_load_odd(RT)
-#         td = slem.td_odd(length)
+        # 1. Get Mode-specific values from self class
+        if mode.lower() == 'even':
+            v0_base = self.v0_even(RS, VS)
+            i0_base = self.i0_even(RS, VS)
+            gamma_s = self.gamma_source_even(RS)
+            gamma_l = self.gamma_load_even(RT)
+            td = self.td_even(length)
+        else:
+            v0_base = self.v0_odd(RS, VS)
+            i0_base = self.i0_odd(RS, VS)
+            gamma_s = self.gamma_source_odd(RS)
+            gamma_l = self.gamma_load_odd(RT)
+            td = self.td_odd(length)
 
-#     print(f"\n{'='*85}")
-#     print(f" LATTICE DIAGRAM SIMULATION: {mode.upper()} MODE")
-#     print(f" Z0: {getattr(slem, 'Z0_'+mode):.2f} Ohm | Gamma_S: {gamma_s:.4f} | Gamma_L: {gamma_l:.4f}")
-#     print(f"{'='*85}")
-#     print(f"{'Time [ns]':<12} | {'Node':<8} | {'Traveling Wave (dV/dI)':<25} | {'Total V [V]':<12} | {'Total I [mA]':<12}")
-#     print(f"{'-'*85}")
-
-#     # Initial Pulse at t = 0 + offset
-#     t = offset
-#     delta_v = v0
-#     delta_i = i0
-    
-#     # Totals at each end
-#     total_v_z0 = v0
-#     total_i_z0 = i0
-#     total_v_zl = 0.0
-#     total_i_zl = 0.0
-
-#     # Step 0: Initial launch from Source
-#     print(f"{t*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (init) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
-
-#     for step in range(1, max_steps + 1):
-#         t += td
+        # 2. Determine Initial State and Pulse Sign
+        # The 'delta' is the traveling wave. For falling, the delta is negative.
+        delta_v = v0_base * v_sign
+        delta_i = i0_base * v_sign
         
-#         if step % 2 != 0:
-#             # --- ARIVING AT LOAD (z = l) ---
-#             incident_v = delta_v
-#             incident_i = delta_i
-            
-#             reflected_v = incident_v * gamma_l
-#             reflected_i = incident_i * (-gamma_l) # The Current Inversion
-            
-#             # The total at a node is the sum of ALL waves that have arrived there
-#             # At z=l, this is simply the current incident + reflected pair
-#             total_v_zl += (incident_v + reflected_v)
-#             total_i_zl += (incident_i + reflected_i)
-            
-#             # This reflected wave is now the delta traveling back to the source
-#             delta_v = reflected_v
-#             delta_i = reflected_i
-            
-#             print(f"{t*1e9:<12.3f} | {'z = l':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_zl:<12.4f} | {total_i_zl*1e3:<12.4f}")
-            
-#         else:
-#             # --- ARRIVING AT SOURCE (z = 0) ---
-#             incident_v = delta_v
-#             incident_i = delta_i
-            
-#             reflected_v = incident_v * gamma_s
-#             reflected_i = incident_i * (-gamma_s)
-            
-#             total_v_z0 += (incident_v + reflected_v)
-#             total_i_z0 += (incident_i + reflected_i)
-            
-#             delta_v = reflected_v
-#             delta_i = reflected_i
-            
-#             print(f"{t*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
+        if is_rising:
+            total_v_z0, total_i_z0 = delta_v, delta_i
+            total_v_zl, total_i_zl = 0.0, 0.0
+        else:
+            # For falling, we start at the 'High' steady state
+            v_high = self.v_inf_rising(RS, RT, VS)
+            i_high = self.i_inf_rising(RS, RT, VS)
+            total_v_z0, total_i_z0 = v_high + delta_v, i_high + delta_i
+            total_v_zl, total_i_zl = v_high, i_high
 
-#         # Exit condition: if the reflected wave is negligible
-#         if abs(delta_v) < threshold:
-#             print(f"{'-'*85}")
-#             print(f"Convergence reached at t = {t*1e9:.3f} ns")
-#             break
-            
-#     # Final check against steady state
-#     v_inf = slem.v_inf_rising(RS, RT, VS)
-#     i_inf = slem.i_inf_rising(RS, RT, VS)
-#     print(f"Steady State Check: V_inf = {v_inf:.3f}V, I_inf = {i_inf*1e3:.2f}mA")
-#     print(f"{'='*85}\n")
+        # Header Printing
+        print(f"\n{'='*85}")
+        print(f" LATTICE DIAGRAM: {mode.upper()} Mode | {edge.upper()} Edge")
+        print(f" Start V: { (0.0 if is_rising else self.v_inf_rising(RS, RT, VS)):.3f}V | VS: {VS*v_sign:.2f}V")
+        print(f"{'='*85}")
+        print(f"{'Time [ns]':<12} | {'Node':<8} | {'Traveling Wave (dV/dI)':<25} | {'Total V [V]':<12} | {'Total I [mA]':<12}")
+        print(f"{'-'*85}")
 
+        # Step 0: Initial launch
+        print(f"{offset*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (init) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
 
-def generate_lattice_table(slem, RS, RT, VS, length, mode='even', edge='rising', offset=1e-9, max_steps=8, threshold=1e-5):
-    """
-    Generates a lattice simulation.
-    - edge='rising': Pulse is +VS, totals start at 0.
-    - edge='falling': Pulse is -VS, totals start at V_inf_rising.
-    """
-    is_rising = edge.lower() == 'rising'
-    v_sign = 1.0 if is_rising else -1.0
+        t = offset
+        for step in range(1, max_steps + 1):
+            t += td
+            if step % 2 != 0: # Arriving at Load
+                inc_v, inc_i = delta_v, delta_i
+                refl_v, refl_i = inc_v * gamma_l, inc_i * (-gamma_l)
+                total_v_zl += (inc_v + refl_v)
+                total_i_zl += (inc_i + refl_i)
+                delta_v, delta_i = refl_v, refl_i
+                print(f"{t*1e9:<12.3f} | {'z = l':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_zl:<12.4f} | {total_i_zl*1e3:<12.4f}")
+            else: # Arriving at Source
+                inc_v, inc_i = delta_v, delta_i
+                refl_v, refl_i = inc_v * gamma_s, inc_i * (-gamma_s)
+                total_v_z0 += (inc_v + refl_v)
+                total_i_z0 += (inc_i + refl_i)
+                delta_v, delta_i = refl_v, refl_i
+                print(f"{t*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
 
-    # 1. Get Mode-specific values from SLEM class
-    if mode.lower() == 'even':
-        v0_base = slem.v0_even(RS, VS)
-        i0_base = slem.i0_even(RS, VS)
-        gamma_s = slem.gamma_source_even(RS)
-        gamma_l = slem.gamma_load_even(RT)
-        td = slem.td_even(length)
-    else:
-        v0_base = slem.v0_odd(RS, VS)
-        i0_base = slem.i0_odd(RS, VS)
-        gamma_s = slem.gamma_source_odd(RS)
-        gamma_l = slem.gamma_load_odd(RT)
-        td = slem.td_odd(length)
-
-    # 2. Determine Initial State and Pulse Sign
-    # The 'delta' is the traveling wave. For falling, the delta is negative.
-    delta_v = v0_base * v_sign
-    delta_i = i0_base * v_sign
-    
-    if is_rising:
-        total_v_z0, total_i_z0 = delta_v, delta_i
-        total_v_zl, total_i_zl = 0.0, 0.0
-    else:
-        # For falling, we start at the 'High' steady state
-        v_high = slem.v_inf_rising(RS, RT, VS)
-        i_high = slem.i_inf_rising(RS, RT, VS)
-        total_v_z0, total_i_z0 = v_high + delta_v, i_high + delta_i
-        total_v_zl, total_i_zl = v_high, i_high
-
-    # Header Printing
-    print(f"\n{'='*85}")
-    print(f" LATTICE DIAGRAM: {mode.upper()} Mode | {edge.upper()} Edge")
-    print(f" Start V: { (0.0 if is_rising else slem.v_inf_rising(RS, RT, VS)):.3f}V | VS: {VS*v_sign:.2f}V")
-    print(f"{'='*85}")
-    print(f"{'Time [ns]':<12} | {'Node':<8} | {'Traveling Wave (dV/dI)':<25} | {'Total V [V]':<12} | {'Total I [mA]':<12}")
-    print(f"{'-'*85}")
-
-    # Step 0: Initial launch
-    print(f"{offset*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (init) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
-
-    t = offset
-    for step in range(1, max_steps + 1):
-        t += td
-        if step % 2 != 0: # Arriving at Load
-            inc_v, inc_i = delta_v, delta_i
-            refl_v, refl_i = inc_v * gamma_l, inc_i * (-gamma_l)
-            total_v_zl += (inc_v + refl_v)
-            total_i_zl += (inc_i + refl_i)
-            delta_v, delta_i = refl_v, refl_i
-            print(f"{t*1e9:<12.3f} | {'z = l':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_zl:<12.4f} | {total_i_zl*1e3:<12.4f}")
-        else: # Arriving at Source
-            inc_v, inc_i = delta_v, delta_i
-            refl_v, refl_i = inc_v * gamma_s, inc_i * (-gamma_s)
-            total_v_z0 += (inc_v + refl_v)
-            total_i_z0 += (inc_i + refl_i)
-            delta_v, delta_i = refl_v, refl_i
-            print(f"{t*1e9:<12.3f} | {'z = 0':<8} | {delta_v:>7.3f}V, {delta_i*1e3:>7.2f}mA (refl) | {total_v_z0:<12.4f} | {total_i_z0*1e3:<12.4f}")
-
-        if abs(delta_v) < threshold:
-            break
-            
-    # Final check
-    target_v = slem.v_inf_rising(RS, RT, VS) if is_rising else 0.0
-    print(f"{'-'*85}\nTarget Steady State: {target_v:.3f}V | Simulation Ended at: {total_v_z0:.4f}V")
-    print(f"{'='*85}\n")
+            if abs(delta_v) < threshold:
+                break
+                
+        # Final check
+        target_v = self.v_inf_rising(RS, RT, VS) if is_rising else 0.0
+        print(f"{'-'*85}\nTarget Steady State: {target_v:.3f}V | Simulation Ended at: {total_v_z0:.4f}V")
+        print(f"{'='*85}\n")
     
