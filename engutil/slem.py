@@ -193,10 +193,10 @@ class SLEM:
         r"""
         t_{d,even} = \frac{l}{v_{p,even}}
         """
-        return length / self.vp_even()
+        return length / self.vp_even
 
     def td_odd(self, length):
         r"""
         t_{d,odd} = \frac{l}{v_{p,odd}}
         """
-        return length / self.vp_odd()
+        return length / self.vp_odd
