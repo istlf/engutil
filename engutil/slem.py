@@ -347,53 +347,6 @@ class SLEM:
         plt.tight_layout()
         plt.show()
 
-
-    def plot_crosstalk(self, VS, RS, line_length, t_r, start_ns=1.0):
-        # 1. Get amplitudes and timing
-        vb_peak, vf_peak, td_s = self.get_crosstalk_amplitudes(VS, RS, line_length, t_r*1e-9)
-        td = td_s * 1e9  # Convert to ns
-        
-        # 2. Time Axis
-        t_max = start_ns + 2*td + (t_r * 3)
-        t = np.linspace(0, t_max, 2000)
-        
-        def ramp(time, t_start, duration):
-            return np.clip((time - t_start) / duration, 0, 1)
-
-        # 3. Calculate Waveforms
-        # NEXT: v_b(t) = K * [v1(t) - v1(t - 2td)]
-        # This creates a pulse starting at 'start_ns' and ending at 'start_ns + 2*td'
-        next_signal = vb_peak * (ramp(t, start_ns, t_r) - ramp(t, start_ns + 2*td, t_r))
-        
-        # FEXT: v_f(t) 
-        # This is a pulse that arrives at the far end (z=l) at time td
-        # It is effectively the derivative of the ramp.
-        # We model it as a pulse of width t_r centered at td.
-        fext_pulse = np.where((t >= start_ns + td) & (t <= start_ns + td + t_r), vf_peak, 0)
-        
-        # 4. Plotting
-        fig, ax = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-        
-        # Top Plot: Near-End (z=0)
-        ax[0].plot(t, next_signal, 'k-', label='NEXT $v_b(t)$')
-        ax[0].set_ylabel('Voltage [V]')
-        ax[0].set_title(f'Crosstalk: Near-End ($z=0$)')
-        ax[0].grid(True, alpha=0.3)
-        ax[0].legend()
-        
-        # Bottom Plot: Far-End (z=l)
-        ax[1].plot(t, fext_pulse, 'r-', label='FEXT $v_f(t)$')
-        ax[1].set_ylabel('Voltage [V]')
-        ax[1].set_title(f'Crosstalk: Far-End ($z=l$)')
-        ax[1].set_xlabel('Time [ns]')
-        ax[1].grid(True, alpha=0.3)
-        ax[1].legend()
-        
-        plt.tight_layout()
-        plt.show()
-
-
-
     def plot_slem(self, VS, RT, RS, length, mode="even", edge="rising", start=1.0, num_bounces=5, rise_time=0.1):
         """
         Unified plotting function for transmission line transients.
